@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+venv/
+
+# MLflow
+mlruns/
+mlflow.db
+mlflow.log
+
+# Artifacts and models
+artifacts/
+artifact*/
+
+# Data
+data/*
+!data/.gitkeep
+*data*/
+
+# Labels
+labels/
+prelabels*
+prelabels/
+
+# File types
+*.csv
+*.json
+
+# Environment
+.env

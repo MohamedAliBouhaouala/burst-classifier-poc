@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  serve-api:
+    container_name: serve-api
+    build:
+      context: ./
+    env_file: .env
+    command: >
+      python3 /app/src/cli.py serve --model-path /app/${MODEL_DIR} --port ${API_SERVE_PORT} --host ${API_SERVE_HOST}
+    volumes:
+      - ./src:/app/src
+      - ./${MODEL_DIR}:/app/${MODEL_DIR}
+    ports:
+      - "${API_SERVE_PORT}:${API_SERVE_PORT}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${API_SERVE_PORT}/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

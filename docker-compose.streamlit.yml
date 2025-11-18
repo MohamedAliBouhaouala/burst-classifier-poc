@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  serve-api:
+    container_name: label-ui
+    build:
+      context: ./
+    env_file: ./.env
+    command: >-
+      streamlit run /app/src/label_ui.py
+    volumes:
+      - ./src:/app/src 
+    ports:
+      - "${LABEL_UI_PORT}:8501" 
