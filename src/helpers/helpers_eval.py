@@ -10,6 +10,7 @@ Usage examples:
   python -m helpers.evaluate --model artifacts/best_model --data-dir data --out-dir results --split FULL
   python -m helpers.evaluate --model artifacts/best_model --data-dir data --out-dir results --split TEST --split-map data/split_map.json
 """
+
 import os
 import json
 import math
@@ -18,11 +19,18 @@ from datetime import datetime
 
 import numpy as np
 
-from sklearn.metrics import precision_recall_fscore_support, f1_score, accuracy_score, precision_recall_curve, auc
+from sklearn.metrics import (
+    precision_recall_fscore_support,
+    f1_score,
+    accuracy_score,
+    precision_recall_curve,
+    auc,
+)
 import warnings
 
 from helpers.dataset import build_meta_from_dir, LABEL_MAP, INV_LABEL_MAP
 from helpers.constants import LABELS, LABEL_IDX, FULL
+
 
 def load_split_map(split_map_path: str) -> Dict[str, str]:
     """
@@ -35,8 +43,9 @@ def load_split_map(split_map_path: str) -> Dict[str, str]:
     # normalize keys (filenames) and values
     out = {}
     for k, v in d.items():
-        out[os.path.basename(k)] = (v.upper() if isinstance(v, str) else v)
+        out[os.path.basename(k)] = v.upper() if isinstance(v, str) else v
     return out
+
 
 def filter_meta_by_split(meta_df, split_map: Dict[str, str], split_choice: str):
     """
@@ -48,11 +57,16 @@ def filter_meta_by_split(meta_df, split_map: Dict[str, str], split_choice: str):
     if split_choice == FULL:
         return meta_df
     if not split_map:
-        raise SystemExit("split choice requested but no split_map provided (use --split-map or include split_map.json in data dir)")
+        raise SystemExit(
+            "split choice requested but no split_map provided (use --split-map or include split_map.json in data dir)"
+        )
     # filter where audio_file basename maps to split_choice
     allowed = {fname for fname, s in split_map.items() if s == split_choice}
     if not allowed:
         raise SystemExit(f"No files in split_map for split={split_choice}")
     # filter
     import pandas as pd
-    return meta_df[meta_df['audio_file'].map(os.path.basename).isin(allowed)].reset_index(drop=True)
+
+    return meta_df[
+        meta_df["audio_file"].map(os.path.basename).isin(allowed)
+    ].reset_index(drop=True)

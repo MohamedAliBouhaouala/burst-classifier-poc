@@ -5,25 +5,36 @@ from torch import nn, optim
 
 from .constants import LABEL_MAP
 
+
 def compute_class_weights(meta, label_map, device):
-    counts = meta['label'].map(label_map).value_counts().reindex([0, 1, 2]).fillna(0).values.astype(float)
+    counts = (
+        meta["label"]
+        .map(label_map)
+        .value_counts()
+        .reindex([0, 1, 2])
+        .fillna(0)
+        .values.astype(float)
+    )
     weights = np.where(counts > 0, 1.0 / (counts + 1e-12), 0.0)
     return torch.tensor(weights, dtype=torch.float32).to(device)
 
+
 def _get_criterion(train_meta, device):
-    """ Return weighted CrossEntropyLoss.
+    """Return weighted CrossEntropyLoss.
     @TODO: Extend this function to support configurable loss functions such as FocalLoss, LabelSmoothingCrossEntropy
     """
     weights = compute_class_weights(train_meta, LABEL_MAP, device)
     criterion = nn.CrossEntropyLoss(weight=weights)
     return criterion
 
-def _get_optimizer(model, lr): 
-    """ Return Adam Optimizer.
+
+def _get_optimizer(model, lr):
+    """Return Adam Optimizer.
     @TODO: Add flexibility to choose between different optimizers such as Adagrad, RMSprop etc
     """
     optimizer = optim.Adam(model.parameters(), lr=lr)
     return optimizer
+
 
 def compute_val_metrics_and_loss(model, loader, device, criterion):
     """
@@ -46,7 +57,9 @@ def compute_val_metrics_and_loss(model, loader, device, criterion):
             total_samples += batch_n
             p = torch.argmax(prob, dim=1).cpu().numpy()
             pr = prob.cpu().numpy()
-            preds.extend(p.tolist()); ys.extend(y.cpu().numpy().tolist()); probs.extend(pr.tolist())
+            preds.extend(p.tolist())
+            ys.extend(y.cpu().numpy().tolist())
+            probs.extend(pr.tolist())
     val_loss = (total_loss / total_samples) if total_samples > 0 else 0.0
     val_acc = accuracy_score(ys, preds) if len(ys) > 0 else 0.0
     return ys, preds, probs, float(val_loss), float(val_acc)

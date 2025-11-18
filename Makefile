@@ -39,11 +39,11 @@ gate: evaluate
 # --- Prelabel / Annotator UI / retrain ---
 prelabel:
 	@echo "=== PRELABEL (batch) ==="
-	python3 src/cli.py predict --model $(ARTIFACTS_DIR) --audio $(TEST_DATA) --out $(ARTIFACTS_DIR)/prelabels.json --device $(DEVICE) --tracker $(TRACKER) --tracker-project $(TRACKER_PROJECT) --tracker-task prelabeling-snapshots --batch 
+	python3 src/cli.py predict --model $(ARTIFACTS_DIR) --audio $(TEST_DATA) --out $(ARTIFACTS_DIR)/prelabels.json --device $(DEVICE) --tracker $(TRACKER) --tracker-project $(TRACKER_PROJECT) --tracker-task prelabeling-snapshots --batch
 
 label-ui:
 	@echo "=== START LABEL UI ==="
-	docker compose -f docker-compose.streamlit.yml up -d 
+	docker compose -f docker-compose.streamlit.yml up -d
 
 label-ui-stop:
 	@echo "=== STOP LABEL UI ==="

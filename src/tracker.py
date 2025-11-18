@@ -1,6 +1,7 @@
 import os
 import json
 
+
 class NoopTracker:
     def __init__(self, project=None, task_name=None, **kwargs):
         self.project = project
@@ -31,7 +32,9 @@ class ClearMLTracker:
         try:
             from clearml import Task, OutputModel
         except Exception as e:
-            raise ImportError("clearml not installed. Install with `pip install clearml` to use ClearML tracker.") from e
+            raise ImportError(
+                "clearml not installed. Install with `pip install clearml` to use ClearML tracker."
+            ) from e
         self.Task = Task
         self.OutputModel = OutputModel
         self.project = project or "default"
@@ -45,11 +48,15 @@ class ClearMLTracker:
 
     def log_metric(self, name: str, value, step: int = None):
         logger = self.task.get_logger()
-        logger.report_scalar("metrics", name, value, iteration=step if step is not None else 0)
+        logger.report_scalar(
+            "metrics", name, value, iteration=step if step is not None else 0
+        )
 
     def log_artifact(self, path: str, name: str = None):
         # name is optional; clearml will upload the file
-        self.task.upload_artifact(name=name or os.path.basename(path), artifact_object=path)
+        self.task.upload_artifact(
+            name=name or os.path.basename(path), artifact_object=path
+        )
 
     def download_model(self, model_name: str = None, artifact_path: str = None):
         """
@@ -62,7 +69,9 @@ class ClearMLTracker:
             # Get latest model by name
             model = self.OutputModel.get_by_name(model_name, project_name=self.project)
             if model is None:
-                raise RuntimeError(f"ClearML OutputModel '{model_name}' not found in project {self.project}")
+                raise RuntimeError(
+                    f"ClearML OutputModel '{model_name}' not found in project {self.project}"
+                )
             return model.get_local_copy()
         return None
 
@@ -76,7 +85,9 @@ class MLflowTracker:
         try:
             import mlflow
         except Exception as e:
-            raise ImportError("mlflow not installed. Install with `pip install mlflow` to use MLflow tracker.") from e
+            raise ImportError(
+                "mlflow not installed. Install with `pip install mlflow` to use MLflow tracker."
+            ) from e
         self.mlflow = mlflow
         self.project = project or "default"
         self.task_name = task_name or "task"
@@ -119,10 +130,14 @@ class MLflowTracker:
             return artifact_path
         if artifact_path:
             try:
-                local = self.mlflow.artifacts.download_artifacts(artifact_uri=artifact_path)
+                local = self.mlflow.artifacts.download_artifacts(
+                    artifact_uri=artifact_path
+                )
                 return local
             except Exception as e:
-                raise RuntimeError(f"Failed to download mlflow artifact {artifact_path}: {e}")
+                raise RuntimeError(
+                    f"Failed to download mlflow artifact {artifact_path}: {e}"
+                )
         # model registry integration would be done here in a real system
         return None
 
@@ -133,7 +148,9 @@ class MLflowTracker:
             pass
 
 
-def TrackerFactory(tracker_type: str = "none", project: str = None, task_name: str = None, **kwargs):
+def TrackerFactory(
+    tracker_type: str = "none", project: str = None, task_name: str = None, **kwargs
+):
     tt = (tracker_type or "none").lower()
     if tt in ("none", "noop"):
         return NoopTracker(project=project, task_name=task_name, **kwargs)

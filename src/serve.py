@@ -40,7 +40,9 @@ def _safe_save_upload(upload: UploadFile, suffix=".wav") -> str:
     return tmp_path
 
 
-def _format_prediction(audio_path: str, win: Dict[str, Any], top_k: int = 1) -> Dict[str, Any]:
+def _format_prediction(
+    audio_path: str, win: Dict[str, Any], top_k: int = 1
+) -> Dict[str, Any]:
     """
     Convert window prediction (win) to desired output fields.
     Uses LABEL_MAP & INV_LABEL_MAP for consistent ordering/mapping.
@@ -58,7 +60,9 @@ def _format_prediction(audio_path: str, win: Dict[str, Any], top_k: int = 1) -> 
 
     # pad/trim to C
     if probs_arr.size < C:
-        probs_arr = np.pad(probs_arr, (0, C - probs_arr.size), "constant", constant_values=0.0)
+        probs_arr = np.pad(
+            probs_arr, (0, C - probs_arr.size), "constant", constant_values=0.0
+        )
     elif probs_arr.size > C:
         probs_arr = probs_arr[:C]
 
@@ -85,17 +89,30 @@ def _format_prediction(audio_path: str, win: Dict[str, Any], top_k: int = 1) -> 
     }
 
     if top_k and top_k > 1:
-        pairs = [(INV_LABEL_MAP.get(i, str(i)), float(p)) for i, p in enumerate(probs_arr.tolist())]
+        pairs = [
+            (INV_LABEL_MAP.get(i, str(i)), float(p))
+            for i, p in enumerate(probs_arr.tolist())
+        ]
         pairs_sorted = sorted(pairs, key=lambda x: x[1], reverse=True)[:top_k]
-        out["top_predictions"] = [{"label": p[0], "probability": p[1]} for p in pairs_sorted]
+        out["top_predictions"] = [
+            {"label": p[0], "probability": p[1]} for p in pairs_sorted
+        ]
 
     return out
 
 
-def server(model: torch.nn.Module, meta: Dict[str,Any], allowed_origins: Optional[List[str]] = None, default_device: str = "cpu") -> FastAPI:
-    middleware = [Middleware(CORSMiddleware, allow_origins=allowed_origins)] if allowed_origins else None
-    app = FastAPI(title="Burst Classifier POC - Serve",middleware=middleware)
-  
+def server(
+    model: torch.nn.Module,
+    meta: Dict[str, Any],
+    allowed_origins: Optional[List[str]] = None,
+    default_device: str = "cpu",
+) -> FastAPI:
+    middleware = (
+        [Middleware(CORSMiddleware, allow_origins=allowed_origins)]
+        if allowed_origins
+        else None
+    )
+    app = FastAPI(title="Burst Classifier POC - Serve", middleware=middleware)
 
     @app.get("/health")
     def health():
@@ -107,7 +124,9 @@ def server(model: torch.nn.Module, meta: Dict[str,Any], allowed_origins: Optiona
         request_id = str(uuid.uuid4())
         start_ts = time.time()
         try:
-            tmp_path = _safe_save_upload(file, suffix=os.path.splitext(file.filename)[1] or ".wav")
+            tmp_path = _safe_save_upload(
+                file, suffix=os.path.splitext(file.filename)[1] or ".wav"
+            )
 
             # call predict helper. Be robust if predict signature changed: try with top_k then without.
             preds = predict(model=model, metadata=meta, audio_path=tmp_path)
@@ -118,12 +137,16 @@ def server(model: torch.nn.Module, meta: Dict[str,Any], allowed_origins: Optiona
                 out.append(_format_prediction(tmp_path, w, top_k=1))
 
             latency = time.time() - start_ts
-            logger.info(json.dumps({
-                "request_id": request_id,
-                "audio_file": os.path.basename(tmp_path),
-                "n_predictions": len(out),
-                "latency_seconds": latency
-            }))
+            logger.info(
+                json.dumps(
+                    {
+                        "request_id": request_id,
+                        "audio_file": os.path.basename(tmp_path),
+                        "n_predictions": len(out),
+                        "latency_seconds": latency,
+                    }
+                )
+            )
 
             return {"predictions": out, "n_predictions": len(out)}
         except Exception as e:
@@ -145,7 +168,9 @@ def server(model: torch.nn.Module, meta: Dict[str,Any], allowed_origins: Optiona
         try:
             # save all uploads temporarily
             for f in files:
-                p = _safe_save_upload(f, suffix=os.path.splitext(f.filename)[1] or ".wav")
+                p = _safe_save_upload(
+                    f, suffix=os.path.splitext(f.filename)[1] or ".wav"
+                )
                 tmp_paths.append(p)
 
             # sequentially predict per file to bound memory
@@ -153,14 +178,18 @@ def server(model: torch.nn.Module, meta: Dict[str,Any], allowed_origins: Optiona
                 preds = predict(model=model, metadata=meta, audio_path=p)
                 for w in preds:
                     all_results.append(_format_prediction(p, w, top_k=1))
-            
+
             latency = time.time() - start_ts
-            logger.info(json.dumps({
-                "request_id": request_id,
-                "n_files": len(tmp_paths),
-                "n_predictions": len(all_results),
-                "latency_seconds": latency,
-            }))
+            logger.info(
+                json.dumps(
+                    {
+                        "request_id": request_id,
+                        "n_files": len(tmp_paths),
+                        "n_predictions": len(all_results),
+                        "latency_seconds": latency,
+                    }
+                )
+            )
 
             return {"predictions": all_results, "n_predictions": len(all_results)}
         finally:
@@ -175,28 +204,62 @@ def server(model: torch.nn.Module, meta: Dict[str,Any], allowed_origins: Optiona
     return app
 
 
-def run_server(model_path: str, host: str = "0.0.0.0", port: int = 8000, allowed_origins: Optional[List[str]] = None, default_device: str = "cpu"):
+def run_server(
+    model_path: str,
+    host: str = "0.0.0.0",
+    port: int = 8000,
+    allowed_origins: Optional[List[str]] = None,
+    default_device: str = "cpu",
+):
     model, meta = load_model(model_path, default_device)
-    app = server(model,meta, allowed_origins=allowed_origins, default_device=default_device)
+    app = server(
+        model, meta, allowed_origins=allowed_origins, default_device=default_device
+    )
     uvicorn.run(app, host=host, port=port, log_level="info")
+
 
 def cli(sys_argv):
     parser = argparse.ArgumentParser(
         description="Serve a pretrained model", prog="serve", usage="%(prog)s [options]"
     )
-    parser.add_argument("-m", "--model-path", help="model directory or name to load", required=True)
-    parser.add_argument("--device", default="cpu", help="default device for inference ('cpu' or 'cuda')")
-    parser.add_argument("-p", "--port", help="port for server (default: 8000)", default=8000, type=int)
-    parser.add_argument("-H", "--host", help="host for server (default: 0.0.0.0)", default="0.0.0.0")
-    parser.add_argument("-ao", "--allowed-origins", nargs="*", help="CORS allowed origins (default '*')", default=["*"])
-    parser.add_argument("-l", "--logging-level", default="info", choices=["critical", "error", "warning", "info", "debug", "notset"])
+    parser.add_argument(
+        "-m", "--model-path", help="model directory or name to load", required=True
+    )
+    parser.add_argument(
+        "--device", default="cpu", help="default device for inference ('cpu' or 'cuda')"
+    )
+    parser.add_argument(
+        "-p", "--port", help="port for server (default: 8000)", default=8000, type=int
+    )
+    parser.add_argument(
+        "-H", "--host", help="host for server (default: 0.0.0.0)", default="0.0.0.0"
+    )
+    parser.add_argument(
+        "-ao",
+        "--allowed-origins",
+        nargs="*",
+        help="CORS allowed origins (default '*')",
+        default=["*"],
+    )
+    parser.add_argument(
+        "-l",
+        "--logging-level",
+        default="info",
+        choices=["critical", "error", "warning", "info", "debug", "notset"],
+    )
 
     args = parser.parse_args(sys_argv)
 
     level = getattr(logging, args.logging_level.upper(), logging.INFO)
     logging.getLogger().setLevel(level)
 
-    run_server(args.model_path, host=args.host, port=args.port, allowed_origins=args.allowed_origins, default_device=args.device)
+    run_server(
+        args.model_path,
+        host=args.host,
+        port=args.port,
+        allowed_origins=args.allowed_origins,
+        default_device=args.device,
+    )
 
 
 if __name__ == "__main__":

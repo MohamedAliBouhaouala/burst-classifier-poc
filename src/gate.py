@@ -8,6 +8,7 @@ import sys
 logger = logging.getLogger("gate")
 logging.basicConfig(level=logging.INFO)
 
+
 def find_evaluation_report(eval_dir: str) -> Optional[Path]:
     """
     Search for an evaluation report file (commonly named evaluation_report.json or metrics.json)
@@ -63,29 +64,34 @@ def gate_cli(eval_dir: str, metric: str, threshold: float):
 
 
 def cli(sys_argv):
-    parser = argparse.ArgumentParser(description="Gate a model evaluation by comparing a chosen metric to a threshold.", prog="gate", usage="%(prog)s [options]")
+    parser = argparse.ArgumentParser(
+        description="Gate a model evaluation by comparing a chosen metric to a threshold.",
+        prog="gate",
+        usage="%(prog)s [options]",
+    )
     parser.add_argument(
         "--eval-dir",
         required=True,
-        help="Directory containing evaluation report JSON files (e.g., evaluation_report.json)."
+        help="Directory containing evaluation report JSON files (e.g., evaluation_report.json).",
     )
 
     parser.add_argument(
         "--metric",
         help="Name of the metric to check in the evaluation report (supports dot-notation for nested metrics).",
-        default="accuracy"
+        default="accuracy",
     )
 
     parser.add_argument(
         "--threshold",
         type=float,
         help="Threshold value for the metric; gate fails if the metric is below this value.",
-        default=0.65
+        default=0.65,
     )
 
     args = parser.parse_args(sys_argv)
 
     gate_cli(**vars(args))
+
 
 if __name__ == "__main__":
     cli(sys.argv[1:])

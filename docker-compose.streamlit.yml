@@ -9,6 +9,6 @@ services:
     command: >-
       streamlit run /app/src/label_ui.py
     volumes:
-      - ./src:/app/src 
+      - ./src:/app/src
     ports:
-      - "${LABEL_UI_PORT}:8501" 
+      - "${LABEL_UI_PORT}:8501"

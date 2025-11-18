@@ -5,8 +5,10 @@ import json
 import pandas as pd
 import sys
 
+
 def _safe_mkdir(path: str):
     os.makedirs(path, exist_ok=True)
+
 
 # def sha256_file(path: str) -> str:
 #     h = hashlib.sha256()
@@ -15,6 +17,7 @@ def _safe_mkdir(path: str):
 #             h.update(chunk)
 #     return h.hexdigest()
 
+
 def sha256_file(path) -> dict:
     h = hashlib.sha256()
     with open(path, "rb") as fh:
@@ -22,11 +25,16 @@ def sha256_file(path) -> dict:
             h.update(chunk)
     return h.hexdigest(), os.path.getsize(path)
 
+
 def dataset_hash(meta_df: pd.DataFrame, data_dir: str) -> str:
     h = hashlib.sha256()
-    for _, r in meta_df.sort_values(['audio_file','start_seconds','end_seconds']).iterrows():
-        h.update(f"{r['audio_file']},{r['start_seconds']},{r['end_seconds']},{r['label']}\n".encode())
-        audio_path = os.path.join(data_dir, r['audio_file'])
+    for _, r in meta_df.sort_values(
+        ["audio_file", "start_seconds", "end_seconds"]
+    ).iterrows():
+        h.update(
+            f"{r['audio_file']},{r['start_seconds']},{r['end_seconds']},{r['label']}\n".encode()
+        )
+        audio_path = os.path.join(data_dir, r["audio_file"])
         try:
             st = os.stat(audio_path)
             h.update(str(st.st_size).encode())
@@ -42,15 +50,18 @@ def get_git_sha():
     except Exception:
         return "local"
 
+
 def save_json(path, obj):
     with open(path, "w") as f:
         json.dump(obj, f, indent=2)
+
 
 def _num(x):
     try:
         return float(x)
     except Exception:
         return float("nan")
+
 
 def compute_manifest_fingerprint(manifest: dict) -> str:
     """
@@ -75,20 +86,24 @@ def compute_manifest_fingerprint(manifest: dict) -> str:
         h.update(f"{rel},{sha},{size}\n".encode())
     return h.hexdigest()
 
-def get_env_info() -> dict :
+
+def get_env_info() -> dict:
     env_info = {"python": sys.version.split()[0]}
     try:
         import torch as _torch
+
         env_info["torch"] = _torch.__version__
     except Exception:
         env_info["torch"] = None
     try:
         import torchaudio as _ta
+
         env_info["torchaudio"] = _ta.__version__
     except Exception:
         env_info["torchaudio"] = None
     try:
         import numpy as _np
+
         env_info["numpy"] = _np.__version__
     except Exception:
         env_info["numpy"] = None

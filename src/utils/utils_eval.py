@@ -2,15 +2,25 @@ import json
 import math
 from typing import List, Optional, Dict, Any
 import numpy as np
-from sklearn.metrics import precision_recall_fscore_support, f1_score, accuracy_score, roc_auc_score, precision_recall_curve, auc
+from sklearn.metrics import (
+    precision_recall_fscore_support,
+    f1_score,
+    accuracy_score,
+    roc_auc_score,
+    precision_recall_curve,
+    auc,
+)
 import matplotlib.pyplot as plt
 import itertools
 import warnings
 
 from helpers.constants import LABELS, LABEL_IDX
 
+
 # Expected Calibration Error
-def compute_ece_per_class(probs: np.ndarray, y_true: np.ndarray, n_bins: int = 10) -> Dict[str, float]:
+def compute_ece_per_class(
+    probs: np.ndarray, y_true: np.ndarray, n_bins: int = 10
+) -> Dict[str, float]:
     """
     Compute per-class Expected Calibration Error (ECE) and overall ECE.
     probs: shape [N, C]
@@ -29,7 +39,7 @@ def compute_ece_per_class(probs: np.ndarray, y_true: np.ndarray, n_bins: int = 1
     overall_ece = 0.0
     bins = np.linspace(0.0, 1.0, n_bins + 1)
     for i in range(n_bins):
-        mask = (probabilities > bins[i]) & (probabilities <= bins[i+1])
+        mask = (probabilities > bins[i]) & (probabilities <= bins[i + 1])
         if not mask.any():
             continue
         acc = (preds[mask] == y_true[mask]).mean()
@@ -41,7 +51,7 @@ def compute_ece_per_class(probs: np.ndarray, y_true: np.ndarray, n_bins: int = 1
         true_bin = (y_true == c).astype(int)
         ece_c = 0.0
         for i in range(n_bins):
-            mask = (prob_c > bins[i]) & (prob_c <= bins[i+1])
+            mask = (prob_c > bins[i]) & (prob_c <= bins[i + 1])
             if not mask.any():
                 continue
             acc = (true_bin[mask] == 1).mean()
@@ -50,28 +60,45 @@ def compute_ece_per_class(probs: np.ndarray, y_true: np.ndarray, n_bins: int = 1
         ece_per[c] = float(ece_c)
     return {"per_class": ece_per, "overall": float(overall_ece)}
 
+
 # ---------- confusion matrix plotting ----------
-def save_confusion_matrix(y_true: List[int], y_pred: List[int], classes: List[str], out_path: str):
+def save_confusion_matrix(
+    y_true: List[int], y_pred: List[int], classes: List[str], out_path: str
+):
     from sklearn.metrics import confusion_matrix
+
     cm = confusion_matrix(y_true, y_pred, labels=list(range(len(classes))))
-    fig, ax = plt.subplots(figsize=(5,4))
-    im = ax.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    fig, ax = plt.subplots(figsize=(5, 4))
+    im = ax.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)
     ax.figure.colorbar(im, ax=ax)
-    ax.set(xticks=np.arange(len(classes)), yticks=np.arange(len(classes)),
-           xticklabels=classes, yticklabels=classes, ylabel="True label", xlabel="Predicted label")
+    ax.set(
+        xticks=np.arange(len(classes)),
+        yticks=np.arange(len(classes)),
+        xticklabels=classes,
+        yticklabels=classes,
+        ylabel="True label",
+        xlabel="Predicted label",
+    )
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-    thresh = cm.max() / 2. if cm.size else 0
+    thresh = cm.max() / 2.0 if cm.size else 0
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        ax.text(j, i, format(cm[i, j], 'd'),
-                horizontalalignment="center",
-                color="white" if cm[i, j] > thresh else "black")
+        ax.text(
+            j,
+            i,
+            format(cm[i, j], "d"),
+            horizontalalignment="center",
+            color="white" if cm[i, j] > thresh else "black",
+        )
     fig.tight_layout()
     fig.savefig(out_path)
     plt.close(fig)
     return out_path
 
+
 # ---------- PR curves (one-vs-rest) ----------
-def save_pr_curves(probs: List[List[float]], y_true: List[int], classes: List[str], out_path: str):
+def save_pr_curves(
+    probs: List[List[float]], y_true: List[int], classes: List[str], out_path: str
+):
     """
     Saves a PR curve figure for each class (one-vs-rest) as a single PNG.
     """
@@ -97,17 +124,27 @@ def save_pr_curves(probs: List[List[float]], y_true: List[int], classes: List[st
     plt.close(fig)
     return out_path
 
+
 # ---------- main metrics aggregator ----------
-def compute_metrics(y_true: List[int], y_pred: List[int], probs: Optional[List[List[float]]] = None) -> Dict:
+def compute_metrics(
+    y_true: List[int], y_pred: List[int], probs: Optional[List[List[float]]] = None
+) -> Dict:
     out = {}
     if len(y_true) == 0:
         return {"error": "no samples"}
-    p, r, f1, sup = precision_recall_fscore_support(y_true, y_pred, labels=list(range(len(LABELS))), zero_division=0)
+    p, r, f1, sup = precision_recall_fscore_support(
+        y_true, y_pred, labels=list(range(len(LABELS))), zero_division=0
+    )
     out["per_class"] = {}
     for i, lab in enumerate(LABELS):
-        out["per_class"][lab] = {"precision": float(p[i]), "recall": float(r[i]), "f1": float(f1[i]), "support": int(sup[i])}
-    out["macro_f1"] = float(f1_score(y_true, y_pred, average='macro'))
-    out["micro_f1"] = float(f1_score(y_true, y_pred, average='micro'))
+        out["per_class"][lab] = {
+            "precision": float(p[i]),
+            "recall": float(r[i]),
+            "f1": float(f1[i]),
+            "support": int(sup[i]),
+        }
+    out["macro_f1"] = float(f1_score(y_true, y_pred, average="macro"))
+    out["micro_f1"] = float(f1_score(y_true, y_pred, average="micro"))
     out["accuracy"] = float(accuracy_score(y_true, y_pred))
     # ECE and PR AUCs if probs provided
     if probs is not None and len(probs) == len(y_true):
@@ -123,7 +160,9 @@ def compute_metrics(y_true: List[int], y_pred: List[int], probs: Optional[List[L
             y_true_arr = np.array(y_true)
             for i, lab in enumerate(LABELS):
                 try:
-                    precision, recall, _ = precision_recall_curve((y_true_arr == i).astype(int), probs_arr[:, i])
+                    precision, recall, _ = precision_recall_curve(
+                        (y_true_arr == i).astype(int), probs_arr[:, i]
+                    )
                     pr_aucs[lab] = float(auc(recall, precision))
                 except Exception:
                     pr_aucs[lab] = None
@@ -132,13 +171,16 @@ def compute_metrics(y_true: List[int], y_pred: List[int], probs: Optional[List[L
             out["pr_auc_per_class"] = None
     return out
 
+
 # ---------- evaluate and optionally log to tracker ----------
-def evaluate_and_log(y_true: List[int],
-                     y_pred: List[int],
-                     probs: Optional[List[List[float]]] = None,
-                     out_dir: Optional[str] = None,
-                     report_name: str = "eval_report.json",
-                     tracker = None) -> Dict:
+def evaluate_and_log(
+    y_true: List[int],
+    y_pred: List[int],
+    probs: Optional[List[List[float]]] = None,
+    out_dir: Optional[str] = None,
+    report_name: str = "eval_report.json",
+    tracker=None,
+) -> Dict:
     """
     Compute metrics, save JSON report and plots to out_dir, and optionally log them to tracker.
     tracker: an object implementing .log_metric(name, value, step), .log_artifact(path, name)
@@ -194,11 +236,16 @@ def evaluate_and_log(y_true: List[int],
 # ---------------------------
 # utils for matching windows to segments
 # ---------------------------
-def interval_intersection(a_start: float, a_end: float, b_start: float, b_end: float) -> float:
+def interval_intersection(
+    a_start: float, a_end: float, b_start: float, b_end: float
+) -> float:
     """Return intersection duration between two intervals (seconds)."""
     return max(0.0, min(a_end, b_end) - max(a_start, b_start))
 
-def weighted_average_probs_for_segment(segment: Dict[str, Any], windows: List[Dict[str, Any]]) -> List[float]:
+
+def weighted_average_probs_for_segment(
+    segment: Dict[str, Any], windows: List[Dict[str, Any]]
+) -> List[float]:
     """
     Given a groundtruth segment dict {'start_seconds','end_seconds'} and a list of predicted windows:
       windows: list of {"start","end","probs":[...]}
@@ -220,9 +267,12 @@ def weighted_average_probs_for_segment(segment: Dict[str, Any], windows: List[Di
         # fallback: pick nearest window by center distance
         if len(windows) == 0:
             # no windows at all: return uniform tiny vector
-            return [1.0/len(LABELS)] * len(LABELS)
+            return [1.0 / len(LABELS)] * len(LABELS)
         seg_center = 0.5 * (s0 + s1)
-        dists = [abs((0.5*(w["start_seconds"]+w["end_seconds"])) - seg_center) for w in windows]
+        dists = [
+            abs((0.5 * (w["start_seconds"] + w["end_seconds"])) - seg_center)
+            for w in windows
+        ]
         idx = int(np.argmin(dists))
         return list(np.array(windows[idx]["probabilities"], dtype=float))
     weights = np.array(weights)
