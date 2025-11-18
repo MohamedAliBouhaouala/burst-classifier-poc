@@ -17,7 +17,12 @@ import numpy as np
 
 from helpers.constants import LABEL_MAP, INV_LABEL_MAP
 from utils.common import dataset_hash, sha256_file
-from helpers.dataset import read_label_file, build_meta_from_dir, build_and_write_dataset_manifest
+from helpers.dataset import (
+    read_label_file,
+    build_meta_from_dir,
+    build_and_write_dataset_manifest,
+)
+
 
 # ---------------------------
 # SegmentDataset (torchaudio)
@@ -51,7 +56,9 @@ class SegmentDataset(Dataset):
         self.transform = transform
         self.augment = augment
         self.rng = random.Random(seed)
-        self.melspec = torchaudio.transforms.MelSpectrogram(sample_rate=self.sr, n_mels=self.n_mels)
+        self.melspec = torchaudio.transforms.MelSpectrogram(
+            sample_rate=self.sr, n_mels=self.n_mels
+        )
         # cache durations to reduce repeated IO
         self._dur_cache: Dict[str, float] = {}
 
@@ -64,7 +71,9 @@ class SegmentDataset(Dataset):
         """
         waveform, sr = torchaudio.load(file_path)  # shape [channels, T]
         if sr != self.sr:
-            waveform = torchaudio.functional.resample(waveform, orig_freq=sr, new_freq=self.sr)
+            waveform = torchaudio.functional.resample(
+                waveform, orig_freq=sr, new_freq=self.sr
+            )
         # to mono
         if waveform.shape[0] > 1:
             waveform = waveform.mean(dim=0, keepdim=True)
@@ -114,24 +123,39 @@ class SegmentDataset(Dataset):
             spec = torch.log1p(spec)
             spec = (spec - spec.mean()) / (spec.std() + 1e-6)
             label = LABEL_MAP.get(row["label"], -1)
-            meta = {"audio_file": rel_audio, "start_seconds": float(row["start_seconds"]),
-                    "end_seconds": float(row["end_seconds"]), "label": row["label"]}
+            meta = {
+                "audio_file": rel_audio,
+                "start_seconds": float(row["start_seconds"]),
+                "end_seconds": float(row["end_seconds"]),
+                "label": row["label"],
+            }
             return spec.float(), int(label), meta
         except FileNotFoundError:
             # Return zero tensor placeholder if missing file (training will continue but manifest will flag missing)
             approx_frames = max(1, int(np.ceil(target_len / 512)))
             spec = torch.zeros((1, self.n_mels, approx_frames), dtype=torch.float32)
             label = LABEL_MAP.get(row["label"], -1)
-            meta = {"audio_file": rel_audio, "start_seconds": float(row["start_seconds"]),
-                    "end_seconds": float(row["end_seconds"]), "label": row["label"], "missing": True}
+            meta = {
+                "audio_file": rel_audio,
+                "start_seconds": float(row["start_seconds"]),
+                "end_seconds": float(row["end_seconds"]),
+                "label": row["label"],
+                "missing": True,
+            }
             return spec, int(label), meta
         except Exception:
             approx_frames = max(1, int(np.ceil(target_len / 512)))
             spec = torch.zeros((1, self.n_mels, approx_frames), dtype=torch.float32)
             label = LABEL_MAP.get(row["label"], -1)
-            meta = {"audio_file": rel_audio, "start_seconds": float(row["start_seconds"]),
-                    "end_seconds": float(row["end_seconds"]), "label": row["label"], "error": True}
+            meta = {
+                "audio_file": rel_audio,
+                "start_seconds": float(row["start_seconds"]),
+                "end_seconds": float(row["end_seconds"]),
+                "label": row["label"],
+                "error": True,
+            }
             return spec, int(label), meta
+
 
 __all__ = [
     "read_label_file",

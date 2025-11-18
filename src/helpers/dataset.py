@@ -19,6 +19,7 @@ import numpy as np
 from .constants import LABEL_MAP, INV_LABEL_MAP
 from utils.common import dataset_hash, sha256_file
 
+
 # ---------------------------
 # Label parsing / metadata
 # ---------------------------
@@ -53,21 +54,26 @@ def read_label_file(path: str, audio_filename: str) -> pd.DataFrame:
                 if label not in LABEL_MAP:
                     # SILENT SKIP unknown labels for now (POC mode)
                     continue
-                rows.append({
-                    "audio_file": audio_filename,
-                    "start_seconds": float(start),
-                    "end_seconds": float(end),
-                    "label": label
-                })
+                rows.append(
+                    {
+                        "audio_file": audio_filename,
+                        "start_seconds": float(start),
+                        "end_seconds": float(end),
+                        "label": label,
+                    }
+                )
     except FileNotFoundError:
         # If the label file is missing/unreadable, return empty df
-        return pd.DataFrame(columns=["audio_file", "start_seconds", "end_seconds", "label"])
+        return pd.DataFrame(
+            columns=["audio_file", "start_seconds", "end_seconds", "label"]
+        )
 
     if len(rows) == 0:
-        return pd.DataFrame(columns=["audio_file", "start_seconds", "end_seconds", "label"])
-    print("MAX")
-    print(max(rows, key=lambda r: r['end_seconds'] - r['start_seconds']))
-    print(max(r['end_seconds'] - r['start_seconds'] for r in rows))
+        return pd.DataFrame(
+            columns=["audio_file", "start_seconds", "end_seconds", "label"]
+        )
+    print(max(rows, key=lambda r: r["end_seconds"] - r["start_seconds"]))
+    print(max(r["end_seconds"] - r["start_seconds"] for r in rows))
     return pd.DataFrame(rows)
 
 
@@ -79,7 +85,9 @@ def build_meta_from_dir(data_dir: str, label_suffixes=(".txt", ".csv")) -> pd.Da
     """
     data_dir = os.path.abspath(data_dir)
     if not os.path.isdir(data_dir):
-        return pd.DataFrame(columns=["audio_file", "start_seconds", "end_seconds", "label"])
+        return pd.DataFrame(
+            columns=["audio_file", "start_seconds", "end_seconds", "label"]
+        )
 
     rows: List[pd.DataFrame] = []
     files = os.listdir(data_dir)
@@ -111,10 +119,15 @@ def build_meta_from_dir(data_dir: str, label_suffixes=(".txt", ".csv")) -> pd.Da
             if len(df) > 0:
                 rows.append(df)
     if len(rows) == 0:
-        return pd.DataFrame(columns=["audio_file", "start_seconds", "end_seconds", "label"])
+        return pd.DataFrame(
+            columns=["audio_file", "start_seconds", "end_seconds", "label"]
+        )
     return pd.concat(rows, ignore_index=True)
 
-def build_and_write_dataset_manifest(meta_df: pd.DataFrame, data_dir: str, out_dir: str, prefix: str = "dataset_manifest") -> Tuple[str, Dict[str, Any]]:
+
+def build_and_write_dataset_manifest(
+    meta_df: pd.DataFrame, data_dir: str, out_dir: str, prefix: str = "dataset_manifest"
+) -> Tuple[str, Dict[str, Any]]:
     """
     Builds and writes a JSON manifest with per-file sha256, size, mtime and label summary.
     Returns (manifest_path, manifest_dict).
@@ -129,14 +142,15 @@ def build_and_write_dataset_manifest(meta_df: pd.DataFrame, data_dir: str, out_d
         if os.path.exists(p) and os.path.isfile(p):
             try:
                 st = os.stat(p)
-                print("ST ", st)
                 sha, size = sha256_file(p)
-                files_info.append({
-                    "relpath": os.path.relpath(p, start=data_dir),
-                    "sha256": sha,
-                    "size": st.st_size,
-                    "mtime": int(st.st_mtime)
-                })
+                files_info.append(
+                    {
+                        "relpath": os.path.relpath(p, start=data_dir),
+                        "sha256": sha,
+                        "size": st.st_size,
+                        "mtime": int(st.st_mtime),
+                    }
+                )
             except Exception as e:
                 files_info.append({"relpath": rel, "error": str(e)})
         else:
@@ -152,12 +166,14 @@ def build_and_write_dataset_manifest(meta_df: pd.DataFrame, data_dir: str, out_d
                     try:
                         st = os.stat(p)
                         sha = sha256_file(p)
-                        files_info.append({
-                            "relpath": rel,
-                            "sha256": sha,
-                            "size": st.st_size,
-                            "mtime": int(st.st_mtime)
-                        })
+                        files_info.append(
+                            {
+                                "relpath": rel,
+                                "sha256": sha,
+                                "size": st.st_size,
+                                "mtime": int(st.st_mtime),
+                            }
+                        )
                     except Exception as e:
                         files_info.append({"relpath": rel, "error": str(e)})
 
@@ -170,7 +186,7 @@ def build_and_write_dataset_manifest(meta_df: pd.DataFrame, data_dir: str, out_d
         "n_audio_files": len(audio_files),
         "n_segments": int(len(meta_df)),
         "label_counts": label_map_counts,
-        "files": files_info
+        "files": files_info,
     }
 
     name = f"{prefix}_{int(time.time())}.json"

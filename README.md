@@ -68,7 +68,7 @@ pip install -r requirements.txt
 2- Train (quick demo - 1 epoch):
 
 ```bash
-make train DATA_DIR=./data ARTIFACTS_DIR=./artifacts BATCH_SIZE=32 EPOCHS=1 
+make train DATA_DIR=./data ARTIFACTS_DIR=./artifacts BATCH_SIZE=32 EPOCHS=1
 # or:
 python3 src/cli.py train --data-dir ./data --artifacts-dir ./artifacts --epochs 1 --batch-size 32
 ```
@@ -87,7 +87,7 @@ python3 src/cli.py predict --model ./artifacts_1 --audio ./test-data --out ./art
 5- Start Streamlit UI for annotators:
 ```bash
 make label-ui # to run a dockerized UI
-# or 
+# or
 streamlit run src/label_ui.py
 ```
 6- Serve the model locally
@@ -129,7 +129,7 @@ Looking forward, authentication and role‑based access control (RBAC) could be 
 Although dataset manifests currently exist, future integration of DVC would allow the project to track large datasets, audio files, and artifacts more comprehensively. DVC would provide reproducible dataset snapshots, remote storage support, and consistent versioning of data used during training and evaluation. This would strengthen the overall reproducibility and traceability of the project.
 ## Weight & Biases Integration
 Although ClearML and MLflow are currently supported, future integration with Weights & Biases (W&B) would offer an additional experiment‑tracking option. Making W&B an optional logging backend would give users more flexibility in how they monitor and analyze experiments.
-## Alternative container runtimes (podman, nerdctl, colima)
+## Alternative Container Runtimes (podman, nerdctl, colima)
 To accommodate users working in different development environments, future work may include documentation and compatibility testing for alternative container runtimes such as Podman, Nerdctl, and Colima. Providing equivalent commands, troubleshooting guidance, and runtime‑specific notes would improve accessibility for developers who do not use Docker.
 
 In addition, Docker presents a few limitations that motivate exploring alternatives. Docker relies on a long‑running background daemon, which can cause performance issues, increased resource usage, or permission‑related complications in certain environments. Furthermore, modern Kubernetes distributions no longer use the Docker daemon as their underlying container engine; instead, they rely on containerd (through CRI‑O or other CRI‑compliant runtimes). Aligning with these runtimes in the future would improve compatibility with Kubernetes-native workflows, reduce unnecessary abstraction layers, and simplify deployments in cloud‑native infrastructures.

@@ -17,7 +17,11 @@ from helpers.helpers_eval import filter_meta_by_split
 
 from utils.utils_eval import compute_metrics, weighted_average_probs_for_segment
 from utils.utils_predict import predict
-from utils.utils_visualize import generate_plots_from_summary, generate_pr_and_calibration
+from utils.utils_visualize import (
+    generate_plots_from_summary,
+    generate_pr_and_calibration,
+)
+
 
 def evaluate_cli(
     model: str,
@@ -54,7 +58,7 @@ def evaluate_cli(
     meta = filter_meta_by_split(meta, split_map, split)
 
     # group segments by audio file
-    files = sorted(meta['audio_file'].unique().tolist())
+    files = sorted(meta["audio_file"].unique().tolist())
 
     all_segment_results = []  # rows for CSV
     y_true = []
@@ -71,7 +75,7 @@ def evaluate_cli(
             print(f"[WARN] audio missing, skipping: {audio_path}")
             continue
         # get segments for this file
-        segs = meta[meta['audio_file'] == audio].to_dict(orient='records')
+        segs = meta[meta["audio_file"] == audio].to_dict(orient="records")
 
         # run predictions for this single file
         try:
@@ -108,14 +112,22 @@ def evaluate_cli(
                 window_map[key] = np.array(p["probabilities"], dtype=float)
             else:
                 # keep the max probs (elementwise) as a conservative merge (unlikely necessary)
-                window_map[key] = np.maximum(window_map[key], np.array(p["probabilities"], dtype=float))
+                window_map[key] = np.maximum(
+                    window_map[key], np.array(p["probabilities"], dtype=float)
+                )
         # convert to list of windows with probs
         windows = []
         for (s, e), probs in sorted(window_map.items()):
             # normalize
             ssum = float(max(probs.sum(), 1e-12))
             probs = (probs / ssum).tolist()
-            windows.append({"start_seconds": float(s), "end_seconds": float(e), "probabilities": probs})
+            windows.append(
+                {
+                    "start_seconds": float(s),
+                    "end_seconds": float(e),
+                    "probabilities": probs,
+                }
+            )
 
         # for each labeled segment compute avg probs via overlap weighting (or nearest window)
         for seg in segs:
@@ -124,15 +136,20 @@ def evaluate_cli(
             pred_label = INV_LABEL_MAP[pred_idx]
             probability = float(avg_probs[pred_idx])
             # store row
-            all_segment_results.append({
-                "audio_file": os.path.basename(audio),
-                "start_seconds": float(seg["start_seconds"]),
-                "end_seconds": float(seg["end_seconds"]),
-                "true_label": seg["label"],
-                "pred_label": pred_label,
-                "probability": probability,
-                "per_class_probability": {INV_LABEL_MAP[i]: float(avg_probs[i]) for i in range(len(avg_probs))}
-            })
+            all_segment_results.append(
+                {
+                    "audio_file": os.path.basename(audio),
+                    "start_seconds": float(seg["start_seconds"]),
+                    "end_seconds": float(seg["end_seconds"]),
+                    "true_label": seg["label"],
+                    "pred_label": pred_label,
+                    "probability": probability,
+                    "per_class_probability": {
+                        INV_LABEL_MAP[i]: float(avg_probs[i])
+                        for i in range(len(avg_probs))
+                    },
+                }
+            )
             y_true.append(LABEL_MAP.get(seg["label"]))
             y_pred.append(pred_idx)
             y_probs.append(avg_probs)
@@ -144,9 +161,27 @@ def evaluate_cli(
     csv_path = os.path.join(out_dir, "per_segment_predictions.csv")
     with open(csv_path, "w", newline="", encoding="utf-8") as fo:
         writer = csv.writer(fo)
-        writer.writerow(["audio_file", "start_seconds", "end_seconds", "true_label", "pred_label", "probability"])
+        writer.writerow(
+            [
+                "audio_file",
+                "start_seconds",
+                "end_seconds",
+                "true_label",
+                "pred_label",
+                "probability",
+            ]
+        )
         for r in all_segment_results:
-            writer.writerow([r["audio_file"], f"{r['start_seconds']:.6f}", f"{r['end_seconds']:.6f}", r["true_label"], r["pred_label"], f"{r['probability']:.6f}"])
+            writer.writerow(
+                [
+                    r["audio_file"],
+                    f"{r['start_seconds']:.6f}",
+                    f"{r['end_seconds']:.6f}",
+                    r["true_label"],
+                    r["pred_label"],
+                    f"{r['probability']:.6f}",
+                ]
+            )
 
     # save metrics JSON (include provenance)
     report = {
@@ -154,7 +189,7 @@ def evaluate_cli(
         "model": model,
         "data_dir": os.path.abspath(data_dir),
         "n_segments": len(all_segment_results),
-        "metrics": metrics
+        "metrics": metrics,
     }
     report_path = os.path.join(out_dir, "evaluation_report.json")
     with open(report_path, "w", encoding="utf-8") as fh:
@@ -177,47 +212,74 @@ def evaluate_cli(
         except Exception:
             pass
 
-    evaluation_results = {"report_path": report_path, "csv_path": csv_path, "metrics": metrics}
+    evaluation_results = {
+        "report_path": report_path,
+        "csv_path": csv_path,
+        "metrics": metrics,
+    }
 
     # generate evaluation plots
     summary_metrics = generate_plots_from_summary(
         evaluation_results["metrics"],
-        out_dir=os.path.join(out_dir,"plots"), 
-        tracker=tracker
+        out_dir=os.path.join(out_dir, "plots"),
+        tracker=tracker,
     )
 
     pr_calibration_summary = generate_pr_and_calibration(
-        y_true, 
-        y_probs,
-        LABELS,
-        out_dir=os.path.join(out_dir,"plots"), 
-        tracker=tracker
+        y_true, y_probs, LABELS, out_dir=os.path.join(out_dir, "plots"), tracker=tracker
     )
     return evaluation_results
 
+
 def cli(sys_argv):
-    parser = argparse.ArgumentParser(description="Evaluate model on labeled directory", prog="evaluate", usage="%(prog)s [options]")
-    parser.add_argument("--model", required=True, help="model directory or name (if using tracker)")
-    parser.add_argument("--data-dir", required=True, help="directory with audio files and label .txt files")
-    parser.add_argument("--out-dir", default="artifacts/eval", help="where to write outputs")
-    parser.add_argument("--tracker", default="none", choices=["none", "clearml", "mlflow"])
+    parser = argparse.ArgumentParser(
+        description="Evaluate model on labeled directory",
+        prog="evaluate",
+        usage="%(prog)s [options]",
+    )
+    parser.add_argument(
+        "--model", required=True, help="model directory or name (if using tracker)"
+    )
+    parser.add_argument(
+        "--data-dir",
+        required=True,
+        help="directory with audio files and label .txt files",
+    )
+    parser.add_argument(
+        "--out-dir", default="artifacts/eval", help="where to write outputs"
+    )
+    parser.add_argument(
+        "--tracker", default="none", choices=["none", "clearml", "mlflow"]
+    )
     parser.add_argument("--tracker-project", default="Burst_Classifier_POC")
     parser.add_argument("--tracker-task", default="evaluation_task")
-    parser.add_argument("--split", "-s", default=FULL, choices=SPLIT_CHOICES, help="the split to test the model on")
-    parser.add_argument("--split-map", default=None, help="optional JSON file mapping audio filename -> split (TRAINING/VALIDATION/TEST)")
+    parser.add_argument(
+        "--split",
+        "-s",
+        default=FULL,
+        choices=SPLIT_CHOICES,
+        help="the split to test the model on",
+    )
+    parser.add_argument(
+        "--split-map",
+        default=None,
+        help="optional JSON file mapping audio filename -> split (TRAINING/VALIDATION/TEST)",
+    )
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--window-seconds", type=float, default=None)
     parser.add_argument("--sr", type=int, default=22050)
     parser.add_argument("--n-mels", type=int, default=64)
     parser.add_argument("--batch-size", type=int, default=64)
-    parser.add_argument("--top-k", type=int, default=1, help="top-K predictions per window")
+    parser.add_argument(
+        "--top-k", type=int, default=1, help="top-K predictions per window"
+    )
     args = parser.parse_args(sys_argv)
 
     res = evaluate_cli(**vars(args))
 
-    print(json.dumps(res["metrics"], indent=2))
     print("Saved CSV:", res["csv_path"])
     print("Saved report:", res["report_path"])
+
 
 if __name__ == "__main__":
     cli(sys.argv[1:])

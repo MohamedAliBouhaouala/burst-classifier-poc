@@ -1,13 +1,14 @@
 import argparse
 import sys
 
+
 class CLI:
-    """CLI describes a command line interface for interacting.
-    """
+    """CLI describes a command line interface for interacting."""
 
     def __init__(self):
         parser = argparse.ArgumentParser(
-            description="cli runner",)
+            description="cli runner",
+        )
         parser.add_argument("command", help="Subcommand to run")
         # parse_args defaults to [1:] for args, but you need to
         # exclude the rest of the args too, or validation will fail
@@ -44,8 +45,10 @@ class CLI:
 
         serve.cli(sys.argv[2:])
 
+
 def main():
     CLI()
+
 
 if __name__ == "__main__":
     main()

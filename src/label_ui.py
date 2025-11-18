@@ -10,6 +10,7 @@ Features:
  - playback of audio segments, save/append corrections, download
  - export: zip with audio segments + label .txt files (no header, tab-separated)
 """
+
 import streamlit as st
 import pandas as pd
 import soundfile as sf
@@ -32,6 +33,7 @@ from helpers.constants import LABELS, REQUIRED_COLS
 st.set_page_config(layout="wide", page_title="Prelabel Review (Simple)")
 st.title("Prelabel Review & Correction")
 
+
 def load_csv_from_uploaded(uploaded) -> pd.DataFrame:
     try:
         df = pd.read_csv(uploaded)
@@ -39,6 +41,7 @@ def load_csv_from_uploaded(uploaded) -> pd.DataFrame:
     except Exception as e:
         st.error(f"Failed to read uploaded CSV: {e}")
         return pd.DataFrame()
+
 
 def load_json_from_uploaded(uploaded) -> pd.DataFrame:
     """
@@ -62,15 +65,22 @@ def load_json_from_uploaded(uploaded) -> pd.DataFrame:
         st.error(f"Invalid JSON: {e}")
         return pd.DataFrame()
 
-    if isinstance(doc, dict) and "predictions" in doc and isinstance(doc["predictions"], list):
+    if (
+        isinstance(doc, dict)
+        and "predictions" in doc
+        and isinstance(doc["predictions"], list)
+    ):
         df = pd.DataFrame(doc["predictions"])
         return df
     if isinstance(doc, list):
         df = pd.DataFrame(doc)
         return df
 
-    st.error("JSON must be a list of prediction objects or an object with a 'predictions' list. Each item must already contain canonical fields.")
+    st.error(
+        "JSON must be a list of prediction objects or an object with a 'predictions' list. Each item must already contain canonical fields."
+    )
     return pd.DataFrame()
+
 
 def load_from_dir(path: str) -> pd.DataFrame:
     p = Path(path)
@@ -87,17 +97,24 @@ def load_from_dir(path: str) -> pd.DataFrame:
         try:
             with f.open("r", encoding="utf-8") as fh:
                 doc = json.load(fh)
-            if isinstance(doc, dict) and "predictions" in doc and isinstance(doc["predictions"], list):
+            if (
+                isinstance(doc, dict)
+                and "predictions" in doc
+                and isinstance(doc["predictions"], list)
+            ):
                 dfs.append(pd.DataFrame(doc["predictions"]))
             elif isinstance(doc, list):
                 dfs.append(pd.DataFrame(doc))
             else:
-                st.warning(f"Skipping {f.name}: JSON doesn't contain 'predictions' list or top-level list")
+                st.warning(
+                    f"Skipping {f.name}: JSON doesn't contain 'predictions' list or top-level list"
+                )
         except Exception as e:
             st.warning(f"Skipping {f.name}: {e}")
     if not dfs:
         return pd.DataFrame()
     return pd.concat(dfs, ignore_index=True, sort=False)
+
 
 def validate_and_normalize(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -126,14 +143,20 @@ def validate_and_normalize(df: pd.DataFrame) -> pd.DataFrame:
     df = df.reset_index(drop=True)
     return df
 
-def save_corrections_to_disk(corrections: pd.DataFrame, annotator: str, out_dir: str = "."):
+
+def save_corrections_to_disk(
+    corrections: pd.DataFrame, annotator: str, out_dir: str = "."
+):
     ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
     fname = f"annotated_{annotator}_{ts}.csv"
     out_path = Path(out_dir) / fname
     corrections.to_csv(out_path, index=False)
     return str(out_path)
 
-def export_corrections_package(corrections_df: pd.DataFrame, audio_root: str, annotator: str) -> str | None:
+
+def export_corrections_package(
+    corrections_df: pd.DataFrame, audio_root: str, annotator: str
+) -> str | None:
     """
     Create a zip archive with:
       - audio_segments/<segment_wav_files>
@@ -174,7 +197,11 @@ def export_corrections_package(corrections_df: pd.DataFrame, audio_root: str, an
                 waveform = waveform.mean(dim=0, keepdim=True)
             s_frame = int(max(0, round(start * sr)))
             e_frame = int(min(round(end * sr), waveform.shape[1]))
-            seg = waveform[:, s_frame:e_frame] if e_frame > s_frame else waveform[:, s_frame:s_frame+1]
+            seg = (
+                waveform[:, s_frame:e_frame]
+                if e_frame > s_frame
+                else waveform[:, s_frame : s_frame + 1]
+            )
             arr = seg.numpy()
             arr = np.transpose(arr)  # (T, channels)
 
@@ -190,7 +217,7 @@ def export_corrections_package(corrections_df: pd.DataFrame, audio_root: str, an
     for audio_basename, segs in labels_map.items():
         txt_path = tmpdir / f"{audio_basename}.txt"
         with open(txt_path, "w", encoding="utf-8") as fh:
-            for (s, e, lab) in segs:
+            for s, e, lab in segs:
                 fh.write(f"{s}\t{e}\t{lab}\n")
 
     # write metadata
@@ -220,6 +247,7 @@ def export_corrections_package(corrections_df: pd.DataFrame, audio_root: str, an
     shutil.rmtree(tmpdir, ignore_errors=True)
     return str(out_zip)
 
+
 # ------------------------
 # UI Inputs
 # ------------------------
@@ -228,19 +256,32 @@ left, right = st.columns([2, 1])
 with left:
     uploaded = st.file_uploader("Upload prelabels (CSV or JSON)", type=["csv", "json"])
     audio_dir = st.text_input("Path to audio folder", value=str(Path.cwd() / "data"))
-    load_folder = st.checkbox("Load CSV/JSON files from folder instead of upload", value=False)
+    load_folder = st.checkbox(
+        "Load CSV/JSON files from folder instead of upload", value=False
+    )
     if load_folder:
-        folder = st.text_input("Prelabels folder (contains .csv/.json)", value=str(Path.cwd() / "prelabels"))
+        folder = st.text_input(
+            "Prelabels folder (contains .csv/.json)",
+            value=str(Path.cwd() / "prelabels"),
+        )
     default_annot = getpass.getuser() or "annotator_1"
     annotator = st.text_input("Annotator ID", value=f"annotator_{default_annot}")
     auto_advance = st.checkbox("Auto-advance to next row after Save", value=True)
 
 with right:
     st.markdown("### Filters & Active-Learning")
-    low_conf_threshold = st.slider("Low-confidence threshold (probability <=)", min_value=0.0, max_value=1.0, value=0.6, step=0.01)
+    low_conf_threshold = st.slider(
+        "Low-confidence threshold (probability <=)",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.6,
+        step=0.01,
+    )
     show_only_low = st.checkbox("Show only low-confidence rows", value=False)
     filename_filter = st.text_input("Filename substring filter (leave empty for all)")
-    label_options = st.multiselect("Filter by label (multi-select)", options=LABELS, default=LABELS)
+    label_options = st.multiselect(
+        "Filter by label (multi-select)", options=LABELS, default=LABELS
+    )
     sort_by_prob = st.checkbox("Sort by probability ascending (low first)", value=True)
 
 # ------------------------
@@ -270,24 +311,34 @@ if load_folder:
 
 # short-circuit if nothing loaded
 if st.session_state.df.empty:
-    st.info("Upload a CSV/JSON or load from folder to begin annotation (must contain exact canonical columns).")
+    st.info(
+        "Upload a CSV/JSON or load from folder to begin annotation (must contain exact canonical columns)."
+    )
     st.stop()
 
 # compute low-confidence flag
 df_all = st.session_state.df.copy()
-df_all["probability"] = pd.to_numeric(df_all.get("probability", np.nan), errors="coerce")
-df_all["low_confidence"] = df_all["probability"].fillna(0.0) <= float(low_conf_threshold)
+df_all["probability"] = pd.to_numeric(
+    df_all.get("probability", np.nan), errors="coerce"
+)
+df_all["low_confidence"] = df_all["probability"].fillna(0.0) <= float(
+    low_conf_threshold
+)
 
 # apply filters
 df_filtered = df_all.copy()
 if filename_filter:
-    df_filtered = df_filtered[df_filtered["audio_file"].str.contains(filename_filter, na=False)]
+    df_filtered = df_filtered[
+        df_filtered["audio_file"].str.contains(filename_filter, na=False)
+    ]
 if label_options:
     df_filtered = df_filtered[df_filtered["label"].isin(label_options)]
 if show_only_low:
     df_filtered = df_filtered[df_filtered["low_confidence"]]
 if sort_by_prob:
-    df_filtered = df_filtered.sort_values(by=["probability"], ascending=True, na_position="last")
+    df_filtered = df_filtered.sort_values(
+        by=["probability"], ascending=True, na_position="last"
+    )
 else:
     df_filtered = df_filtered.sort_index()
 df_filtered = df_filtered.reset_index(drop=True)
@@ -300,15 +351,21 @@ if n == 0:
     st.warning("No rows match your filters.")
     st.stop()
 
-nav_col1, nav_col2, nav_col3 = st.columns([1,1,6])
+nav_col1, nav_col2, nav_col3 = st.columns([1, 1, 6])
 with nav_col1:
     if st.button("Previous"):
         st.session_state.index = max(0, st.session_state.index - 1)
 with nav_col2:
     if st.button("Next"):
-        st.session_state.index = min(n-1, st.session_state.index + 1)
+        st.session_state.index = min(n - 1, st.session_state.index + 1)
 with nav_col3:
-    idx = st.slider("Index", 0, max(0, n-1), value=min(st.session_state.index, n-1), key="index_slider")
+    idx = st.slider(
+        "Index",
+        0,
+        max(0, n - 1),
+        value=min(st.session_state.index, n - 1),
+        key="index_slider",
+    )
     st.session_state.index = int(idx)
 
 i = int(st.session_state.index)
@@ -321,22 +378,26 @@ if bool(row.get("low_confidence", False)):
 else:
     st.success(f"Predicted label: {row.get('label')} (prob={row.get('probability')})")
 
-st.write({
-    "audio_file": row.get("audio_file"),
-    "start_seconds": float(row.get("start_seconds", 0.0)),
-    "end_seconds": float(row.get("end_seconds", 0.0)),
-    "label": row.get("label"),
-    "probability": row.get("probability")
-})
+st.write(
+    {
+        "audio_file": row.get("audio_file"),
+        "start_seconds": float(row.get("start_seconds", 0.0)),
+        "end_seconds": float(row.get("end_seconds", 0.0)),
+        "label": row.get("label"),
+        "probability": row.get("probability"),
+    }
+)
 
 # playback (use soundfile to write BytesIO)
 audio_path = os.path.join(audio_dir, row["audio_file"])
 if os.path.exists(audio_path):
     try:
-        waveform, sr = torchaudio.load(audio_path)   # waveform: [channels, T]
+        waveform, sr = torchaudio.load(audio_path)  # waveform: [channels, T]
         s = int(max(0, round(row["start_seconds"] * sr)))
         e = int(min(round(row["end_seconds"] * sr), waveform.shape[1]))
-        seg = waveform[:, s:e] if e > s else waveform[:, s:s+1]  # shape [channels, T]
+        seg = (
+            waveform[:, s:e] if e > s else waveform[:, s : s + 1]
+        )  # shape [channels, T]
 
         # ensure there is at least 1 frame
         if seg.shape[1] == 0:
@@ -345,15 +406,17 @@ if os.path.exists(audio_path):
             buf = io.BytesIO()
             arr = seg.numpy()
             arr = np.transpose(arr)  # (T, channels)
-            sf.write(buf, arr, sr, format='WAV')
+            sf.write(buf, arr, sr, format="WAV")
             buf.seek(0)
             st.audio(buf.read(), format="audio/wav")
 
             # optional waveform preview
-            fig, ax = plt.subplots(figsize=(8,2))
+            fig, ax = plt.subplots(figsize=(8, 2))
             arr_mono = arr[:, 0] if arr.ndim > 1 else arr
             ax.plot(arr_mono)
-            ax.set_title(f"{row['audio_file']} [{row['start_seconds']:.3f} - {row['end_seconds']:.3f}]")
+            ax.set_title(
+                f"{row['audio_file']} [{row['start_seconds']:.3f} - {row['end_seconds']:.3f}]"
+            )
             st.pyplot(fig)
 
     except Exception as e:
@@ -362,7 +425,7 @@ else:
     st.warning(f"Audio file not found: {audio_path}")
 
 # Correction controls
-col_a, col_b, col_c = st.columns([3,2,3])
+col_a, col_b, col_c = st.columns([3, 2, 3])
 with col_a:
     try:
         cur_idx = LABELS.index(row["label"]) if row["label"] in LABELS else 0
@@ -370,20 +433,24 @@ with col_a:
         cur_idx = 0
     new_label = st.selectbox("Correct label", options=LABELS, index=cur_idx)
 with col_b:
-    action = st.selectbox("Action", options=["corrected", "unchanged", "skip", "uncertain"])
+    action = st.selectbox(
+        "Action", options=["corrected", "unchanged", "skip", "uncertain"]
+    )
 with col_c:
     comment = st.text_input("Comment (optional)", value="")
 
 save_btn = st.button("Save correction for this row")
 if save_btn:
     out = row.to_dict()
-    out.update({
-        "corrected_label": new_label,
-        "annotator_id": annotator,
-        "action": action,
-        "comment": comment,
-        "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-    })
+    out.update(
+        {
+            "corrected_label": new_label,
+            "annotator_id": annotator,
+            "action": action,
+            "comment": comment,
+            "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+    )
     # append to session corrections
     st.session_state.corrections.append(out)
     # append to disk file as well (persist)
@@ -397,7 +464,7 @@ if save_btn:
 
     # auto-advance: update index and request a rerun in a robust way
     if auto_advance:
-        st.session_state.index = min(n-1, st.session_state.index + 1)
+        st.session_state.index = min(n - 1, st.session_state.index + 1)
         # st.stop will halt the run; UI will rerun on next interaction - that is sufficient for most setups
         st.stop()
 
@@ -407,7 +474,12 @@ if st.session_state.corrections:
     st.markdown("#### Corrections (this session)")
     st.dataframe(corrections_df.head(50))
     csv = corrections_df.to_csv(index=False).encode("utf-8")
-    st.download_button("Download corrections CSV", data=csv, file_name=f"corrections_{annotator}_{int(time.time())}.csv", mime="text/csv")
+    st.download_button(
+        "Download corrections CSV",
+        data=csv,
+        file_name=f"corrections_{annotator}_{int(time.time())}.csv",
+        mime="text/csv",
+    )
 
     if st.button("Save corrections to disk (append)"):
         out_path = save_corrections_to_disk(corrections_df, annotator, out_dir=".")
@@ -418,7 +490,9 @@ if st.session_state.corrections:
 
     total_rows = len(corrections_df)
     if total_rows > 500:
-        st.warning(f"You are about to export {total_rows} items — this may create a large zip file. Proceed if you know the size is OK.")
+        st.warning(
+            f"You are about to export {total_rows} items — this may create a large zip file. Proceed if you know the size is OK."
+        )
 
     if st.button("Create export package (zip)"):
         with st.spinner("Creating package..."):
@@ -427,7 +501,12 @@ if st.session_state.corrections:
             st.success("Package created")
             with open(zip_path, "rb") as fh:
                 data = fh.read()
-            st.download_button("Download export zip", data=data, file_name=os.path.basename(zip_path), mime="application/zip")
+            st.download_button(
+                "Download export zip",
+                data=data,
+                file_name=os.path.basename(zip_path),
+                mime="application/zip",
+            )
             try:
                 os.remove(zip_path)
             except Exception:
@@ -436,4 +515,6 @@ if st.session_state.corrections:
             st.error("Failed to create export package")
 
 st.markdown("---")
-st.write("Note: Inputs must already use canonical columns: audio_file,start_seconds,end_seconds,label,probability (probability optional). This UI intentionally does NOT support NDJSON or automatic key remapping.")
+st.write(
+    "Note: Inputs must already use canonical columns: audio_file,start_seconds,end_seconds,label,probability (probability optional). This UI intentionally does NOT support NDJSON or automatic key remapping."
+)

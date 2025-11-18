@@ -12,9 +12,10 @@ from helpers.common import resolve_settings, load_model_from_path
 from helpers.constants import INV_LABEL_MAP
 from helpers.helpers_predict import batch_infer_specs, seg_to_spec_tensor
 
+
 def sliding_window_infer_model(
     model: torch.nn.Module,
-    audio_path,                        # str or List[str]
+    audio_path,  # str or List[str]
     device_str: str = "cpu",
     window_seconds: float = 0.5,
     sr: int = 22050,
@@ -42,7 +43,7 @@ def sliding_window_infer_model(
                     sr=sr,
                     n_mels=n_mels,
                     batch_size=batch_size,
-                    top_k=top_k
+                    top_k=top_k,
                 )
                 all_results.extend(res)
             except Exception as e:
@@ -86,9 +87,17 @@ def sliding_window_infer_model(
         s_frame = int(round(start * sr))
         e_frame = int(round((start + window_seconds) * sr))
         seg = waveform[:, s_frame:e_frame]
-        spec = seg_to_spec_tensor(seg, sr, window_seconds, n_mels, mel_transform)  # [1,n_mels,time]
+        spec = seg_to_spec_tensor(
+            seg, sr, window_seconds, n_mels, mel_transform
+        )  # [1,n_mels,time]
         specs_batch.append(spec)
-        metas_batch.append({"start_seconds": float(start), "end_seconds": float(min(start + window_seconds, total_seconds)), "audio_file": audio_basename})
+        metas_batch.append(
+            {
+                "start_seconds": float(start),
+                "end_seconds": float(min(start + window_seconds, total_seconds)),
+                "audio_file": audio_basename,
+            }
+        )
 
         # flush batch
         if len(specs_batch) >= batch_size:
@@ -96,19 +105,23 @@ def sliding_window_infer_model(
             for i in range(len(specs_batch)):
                 p = probs_batch[i]  # numpy array length C
                 per_class = {INV_LABEL_MAP[idx]: float(p[idx]) for idx in range(len(p))}
-                topk_idx = np.argsort(p)[-top_k:][::-1] if top_k > 0 else np.argsort(p)[::-1]
+                topk_idx = (
+                    np.argsort(p)[-top_k:][::-1] if top_k > 0 else np.argsort(p)[::-1]
+                )
                 for idx in topk_idx:
                     label = INV_LABEL_MAP[int(idx)]
                     probability = float(p[int(idx)])
-                    results.append({
-                        "audio_file": metas_batch[i]["audio_file"],
-                        "start_seconds": metas_batch[i]["start_seconds"],
-                        "end_seconds": metas_batch[i]["end_seconds"],
-                        "label": label,
-                        "probability": probability,
-                        "probabilities": p.tolist(),
-                        "per_class_probability": per_class
-                    })
+                    results.append(
+                        {
+                            "audio_file": metas_batch[i]["audio_file"],
+                            "start_seconds": metas_batch[i]["start_seconds"],
+                            "end_seconds": metas_batch[i]["end_seconds"],
+                            "label": label,
+                            "probability": probability,
+                            "probabilities": p.tolist(),
+                            "per_class_probability": per_class,
+                        }
+                    )
             specs_batch = []
             metas_batch = []
         # @TODO: The hop size is currently fixed at 25% of window_seconds.
@@ -122,21 +135,26 @@ def sliding_window_infer_model(
         for i in range(len(specs_batch)):
             p = probs_batch[i]
             per_class = {INV_LABEL_MAP[idx]: float(p[idx]) for idx in range(len(p))}
-            topk_idx = np.argsort(p)[-top_k:][::-1] if top_k > 0 else np.argsort(p)[::-1]
+            topk_idx = (
+                np.argsort(p)[-top_k:][::-1] if top_k > 0 else np.argsort(p)[::-1]
+            )
             for idx in topk_idx:
                 label = INV_LABEL_MAP[int(idx)]
                 probability = float(p[int(idx)])
-                results.append({
-                    "audio_file": metas_batch[i]["audio_file"],
-                    "start_seconds": metas_batch[i]["start_seconds"],
-                    "end_seconds": metas_batch[i]["end_seconds"],
-                    "label": label,
-                    "probability": probability,
-                    "probabilities": p.tolist(),
-                    "per_class_probability": per_class
-                })
+                results.append(
+                    {
+                        "audio_file": metas_batch[i]["audio_file"],
+                        "start_seconds": metas_batch[i]["start_seconds"],
+                        "end_seconds": metas_batch[i]["end_seconds"],
+                        "label": label,
+                        "probability": probability,
+                        "probabilities": p.tolist(),
+                        "per_class_probability": per_class,
+                    }
+                )
 
     return results
+
 
 def predict(
     model: torch.nn.Module,
@@ -154,14 +172,9 @@ def predict(
 ) -> List[Dict[str, Any]]:
 
     fake_args = SimpleNamespace(
-        window_seconds=window_seconds,
-        sr=sr,
-        n_mels=n_mels,
-        batch_size=batch_size
+        window_seconds=window_seconds, sr=sr, n_mels=n_mels, batch_size=batch_size
     )
 
-    print("METADATA")
-    print(metadata["params"])
     resolved_settings = resolve_settings(metadata, fake_args)
 
     results = sliding_window_infer_model(
@@ -172,7 +185,7 @@ def predict(
         sr=resolved_settings["sr"],
         n_mels=resolved_settings["n_mels"],
         batch_size=resolved_settings["batch_size"],
-        top_k=top_k
+        top_k=top_k,
     )
 
     return results

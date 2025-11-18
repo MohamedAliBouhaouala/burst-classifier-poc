@@ -10,6 +10,7 @@ from utils.utils_predict import predict
 
 AUDIO_EXTS = {".wav", ".flac", ".mp3", ".m4a", ".ogg", ".aiff", ".aif"}
 
+
 def _gather_audio_paths(inputs: List[str], batch: bool = False) -> List[str]:
     """
     Accept a list of file or directory paths. Return a flattened list of audio files.
@@ -61,7 +62,7 @@ def predict_cli(
     audio_paths = _gather_audio_paths(audio, batch=batch)
     if len(audio_paths) == 0:
         raise SystemExit("No audio files found from the provided --audio inputs")
-    
+
     _model, _metadata = load_model(model, device)
 
     return predict(
@@ -76,16 +77,29 @@ def predict_cli(
         sr,
         n_mels,
         batch_size,
-        top_k=top_k
+        top_k=top_k,
     )
 
 
 def cli(sys_argv):
-    parser = argparse.ArgumentParser(description="This script performs prediction", prog="predict", usage="%(prog)s [options]")
-    parser.add_argument("--model", required=True, help="local path or model name (if using tracker)")
+    parser = argparse.ArgumentParser(
+        description="This script performs prediction",
+        prog="predict",
+        usage="%(prog)s [options]",
+    )
+    parser.add_argument(
+        "--model", required=True, help="local path or model name (if using tracker)"
+    )
     # accept one or more files or directories
-    parser.add_argument("--audio", required=True, nargs="+", help="one or more audio files or directories")
-    parser.add_argument("--tracker", default="none", choices=["none", "clearml", "mlflow"])
+    parser.add_argument(
+        "--audio",
+        required=True,
+        nargs="+",
+        help="one or more audio files or directories",
+    )
+    parser.add_argument(
+        "--tracker", default="none", choices=["none", "clearml", "mlflow"]
+    )
     parser.add_argument("--tracker-project", default="Burst_Classifier_POC")
     parser.add_argument("--tracker-task", default="inference_task")
     parser.add_argument("--device", default="cpu", help="cpu or cuda")
@@ -93,9 +107,20 @@ def cli(sys_argv):
     parser.add_argument("--sr", type=int, default=22250)
     parser.add_argument("--n-mels", type=int, default=64)
     parser.add_argument("--batch-size", type=int, default=64)
-    parser.add_argument("--top-k", type=int, default=1, help="Return top-K predictions per window")
-    parser.add_argument("--out", type=str, default=None, help="write JSON or CSV output to this path (if .csv then CSV)")
-    parser.add_argument("--batch", action="store_true", help="when --audio contains directories, scan them recursively")
+    parser.add_argument(
+        "--top-k", type=int, default=1, help="Return top-K predictions per window"
+    )
+    parser.add_argument(
+        "--out",
+        type=str,
+        default=None,
+        help="write JSON or CSV output to this path (if .csv then CSV)",
+    )
+    parser.add_argument(
+        "--batch",
+        action="store_true",
+        help="when --audio contains directories, scan them recursively",
+    )
     args = parser.parse_args(sys_argv)
 
     res = predict_cli(**vars(args))
@@ -112,9 +137,25 @@ def cli(sys_argv):
             os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
             with open(out_path, "w", newline="", encoding="utf-8") as fo:
                 writer = csv.writer(fo)
-                writer.writerow(["audio_file", "start_seconds", "end_seconds", "label", "probability"])
+                writer.writerow(
+                    [
+                        "audio_file",
+                        "start_seconds",
+                        "end_seconds",
+                        "label",
+                        "probability",
+                    ]
+                )
                 for r in res:
-                    writer.writerow([r.get("audio_file"), f"{r.get('start'):.6f}", f"{r.get('end'):.6f}", r.get("label"), f"{r.get('probability'):.6f}"])
+                    writer.writerow(
+                        [
+                            r.get("audio_file"),
+                            f"{r.get('start'):.6f}",
+                            f"{r.get('end'):.6f}",
+                            r.get("label"),
+                            f"{r.get('probability'):.6f}",
+                        ]
+                    )
             print(f"Wrote {len(res)} rows to {out_path}")
         else:
             # treat out as JSON file path (if dir provided, create preds.json inside)

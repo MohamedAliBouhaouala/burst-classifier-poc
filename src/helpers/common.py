@@ -8,6 +8,7 @@ from typing import Optional
 from models.model import SmallCNN
 from tracker import TrackerFactory
 
+
 def resolve_settings(metadata: dict, args):
     """
     Resolver that prefers metadata['params'] values first, then CLI args (if metadata lacks a value),
@@ -90,10 +91,13 @@ def resolve_settings(metadata: dict, args):
     }
 
     # print for traceability (keep simple)
-    print("[INFO] prediction settings resolved (metadata.params preferred):",
-          f"window_seconds={resolved['window_seconds']},",
-          f"sr={resolved['sr']}, n_mels={resolved['n_mels']}, batch_size={resolved['batch_size']}")
+    print(
+        "[INFO] prediction settings resolved (metadata.params preferred):",
+        f"window_seconds={resolved['window_seconds']},",
+        f"sr={resolved['sr']}, n_mels={resolved['n_mels']}, batch_size={resolved['batch_size']}",
+    )
     return resolved
+
 
 def load_model_from_path(path: str, device: torch.device):
     """
@@ -114,7 +118,9 @@ def load_model_from_path(path: str, device: torch.device):
     """
 
     if not os.path.isdir(path):
-        raise ValueError(f"load_model_from_path: expected a directory path, got: {path}")
+        raise ValueError(
+            f"load_model_from_path: expected a directory path, got: {path}"
+        )
 
     # find checkpoint .pt inside directory
     def _find_ckpt(d):
@@ -146,7 +152,13 @@ def load_model_from_path(path: str, device: torch.device):
     # locate state dict inside checkpoint
     state = None
     if isinstance(ckpt, dict):
-        for k in ("model_state", "state_dict", "model", "model_state_dict", "net_state_dict"):
+        for k in (
+            "model_state",
+            "state_dict",
+            "model",
+            "model_state_dict",
+            "net_state_dict",
+        ):
             if k in ckpt and isinstance(ckpt[k], dict):
                 state = ckpt[k]
                 break
@@ -157,7 +169,9 @@ def load_model_from_path(path: str, device: torch.device):
                 state = ckpt
             else:
                 # no obvious state found; fail with helpful message
-                raise RuntimeError(f"Checkpoint {ckpt_path} does not contain a recognized state_dict key.")
+                raise RuntimeError(
+                    f"Checkpoint {ckpt_path} does not contain a recognized state_dict key."
+                )
     else:
         # ckpt is not a dict -> assume it is a state_dict
         state = ckpt
@@ -169,13 +183,18 @@ def load_model_from_path(path: str, device: torch.device):
     except Exception as e:
         # try stripping common 'module.' prefix (DataParallel)
         try:
-            stripped = { (k.replace("module.", "") if k.startswith("module.") else k): v for k, v in state.items() }
+            stripped = {
+                (k.replace("module.", "") if k.startswith("module.") else k): v
+                for k, v in state.items()
+            }
             model.load_state_dict(stripped)
         except Exception as e2:
-            raise RuntimeError(f"Failed to load state_dict from {ckpt_path}: {e}; retry also failed: {e2}")
+            raise RuntimeError(
+                f"Failed to load state_dict from {ckpt_path}: {e}; retry also failed: {e2}"
+            )
 
     # assemble metadata: checkpoint metadata (if any) overrides metadata.json
-    print(meta_from_file['params'])
+    print(meta_from_file["params"])
     meta = {}
     if isinstance(ckpt, dict):
         # Try to get metadata from checkpoint if available
@@ -202,7 +221,10 @@ def load_model_from_path(path: str, device: torch.device):
 
     return model, meta
 
-def try_fetch_model_via_tracker(tracker: TrackerFactory, model_name: str) -> Optional[str]:
+
+def try_fetch_model_via_tracker(
+    tracker: TrackerFactory, model_name: str
+) -> Optional[str]:
     """
     Try common tracker download methods. Return local path or None.
     """
@@ -227,12 +249,13 @@ def try_fetch_model_via_tracker(tracker: TrackerFactory, model_name: str) -> Opt
                 continue
     return None
 
+
 def load_model(
     model_or_name: str,
     tracker_type: str = "none",
     tracker_project: Optional[str] = None,
     tracker_task: Optional[str] = None,
-    device_str: str = "cpu"
+    device_str: str = "cpu",
 ):
     # resolve candidate: local path or try tracker
     if os.path.exists(model_or_name):
@@ -241,15 +264,18 @@ def load_model(
             candidate = os.path.dirname(candidate)
     else:
         candidate = try_fetch_model_via_tracker(
-            tracker_type,
-            model_or_name,
-            tracker_project,
-            tracker_task
+            tracker_type, model_or_name, tracker_project, tracker_task
         )
-        if candidate and os.path.isfile(candidate) and candidate.lower().endswith(".pt"):
+        if (
+            candidate
+            and os.path.isfile(candidate)
+            and candidate.lower().endswith(".pt")
+        ):
             candidate = os.path.dirname(candidate)
         if not candidate:
-            raise RuntimeError(f"Model '{model_or_name}' not found locally and tracker could not fetch it.")
+            raise RuntimeError(
+                f"Model '{model_or_name}' not found locally and tracker could not fetch it."
+            )
 
     device = torch.device(device_str)
     model, metadata = load_model_from_path(candidate, device=device)
