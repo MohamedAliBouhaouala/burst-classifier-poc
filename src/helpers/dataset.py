@@ -1,6 +1,5 @@
-# src/dataset.py
 """
-Dataset utilities for Burst Classifier POC - reconciled version with silent skip for unknown labels.
+Dataset utilities for Burst Classifier POC.
 """
 
 from typing import Tuple, List, Dict, Any

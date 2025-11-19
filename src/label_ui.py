@@ -1,5 +1,5 @@
 """
-Streamlit prelabel review & correction UI (no NDJSON, no row coercion).
+Streamlit prelabel review & correction UI.
 
 Inputs must already use canonical column names:
   audio_file, start_seconds, end_seconds, label, probability (optional)

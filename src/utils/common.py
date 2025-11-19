@@ -10,14 +10,6 @@ def _safe_mkdir(path: str):
     os.makedirs(path, exist_ok=True)
 
 
-# def sha256_file(path: str) -> str:
-#     h = hashlib.sha256()
-#     with open(path, "rb") as f:
-#         for chunk in iter(lambda: f.read(8192), b""):
-#             h.update(chunk)
-#     return h.hexdigest()
-
-
 def sha256_file(path) -> dict:
     h = hashlib.sha256()
     with open(path, "rb") as fh:

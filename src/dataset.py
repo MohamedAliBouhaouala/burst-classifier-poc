@@ -1,10 +1,3 @@
-"""
-Dataset utilities for Burst Classifier POC - reconciled version with silent skip for unknown labels.
-
-This file merges the torchaudio-based dataset implementation with manifest/hash utilities.
-Unknown labels found in label files are silently skipped (no prints, no errors).
-"""
-
 from typing import Dict
 import os
 import random
