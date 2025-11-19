@@ -26,7 +26,7 @@ all: train evaluate
 # --- Training / evaluation / gating ---
 train:
 	@echo "=== TRAIN ==="
-	python3 src/cli.py train --data-dir $(DATA_DIR) --artifacts-dir $(ARTIFACTS_DIR) --epochs $(EPOCHS) --batch-size $(BATCH_SIZE) --lr $(LEARNING_RATE) --epochs $(EPOCHS) --tracker $(TRACKER) --tracker-project $(TRACKER_PROJECT)
+	python3 src/cli.py train --data-dir $(DATA_DIR) --artifacts-dir $(ARTIFACTS_DIR) --epochs $(EPOCHS) --batch-size $(BATCH_SIZE) --lr $(LEARNING_RATE) --tracker $(TRACKER) --tracker-project $(TRACKER_PROJECT)
 
 evaluate:
 	@echo "=== EVALUATE ==="
