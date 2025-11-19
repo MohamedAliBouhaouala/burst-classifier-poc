@@ -194,7 +194,6 @@ def load_model_from_path(path: str, device: torch.device):
             )
 
     # assemble metadata: checkpoint metadata (if any) overrides metadata.json
-    print(meta_from_file["params"])
     meta = {}
     if isinstance(ckpt, dict):
         # Try to get metadata from checkpoint if available
@@ -263,9 +262,7 @@ def load_model(
         if os.path.isfile(candidate) and candidate.lower().endswith(".pt"):
             candidate = os.path.dirname(candidate)
     else:
-        candidate = try_fetch_model_via_tracker(
-            tracker_type, model_or_name, tracker_project, tracker_task
-        )
+        candidate = try_fetch_model_via_tracker(tracker_type, model_or_name)
         if (
             candidate
             and os.path.isfile(candidate)

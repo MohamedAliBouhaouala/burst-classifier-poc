@@ -18,7 +18,6 @@ import sys
 import time
 import torch
 
-from helpers.common import try_fetch_model_via_tracker
 from helpers.constants import LABEL_MAP, INV_LABEL_MAP
 
 from helpers.common import load_model
