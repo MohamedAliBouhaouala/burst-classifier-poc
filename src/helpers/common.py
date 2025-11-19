@@ -4,9 +4,12 @@ import torch
 import os
 
 from typing import Optional
+import logging
 
 from models.model import SmallCNN
 from tracker import TrackerFactory
+
+logger = logging.getLogger(__name__)
 
 
 def resolve_settings(metadata: dict, args):
@@ -89,12 +92,10 @@ def resolve_settings(metadata: dict, args):
         "n_mels": int(n_mels),
         "batch_size": int(batch_size),
     }
-
-    # print for traceability (keep simple)
-    print(
-        "[INFO] prediction settings resolved (metadata.params preferred):",
-        f"window_seconds={resolved['window_seconds']},",
-        f"sr={resolved['sr']}, n_mels={resolved['n_mels']}, batch_size={resolved['batch_size']}",
+    logger.info(
+        f"prediction settings resolved (metadata.params preferred):"
+        f"window_seconds={resolved['window_seconds']},"
+        f"sr={resolved['sr']}, n_mels={resolved['n_mels']}, batch_size={resolved['batch_size']}"
     )
     return resolved
 

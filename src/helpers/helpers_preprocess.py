@@ -1,10 +1,12 @@
+import logging
 import torch
 from torch.utils.data import DataLoader
 import numpy as np
 import random
-
 from .constants import SEED
 from dataset import SegmentDataset
+
+logger = logging.getLogger(__name__)
 
 
 def set_seed(seed=SEED):
@@ -28,7 +30,7 @@ def prepare_loader_from_meta(meta_df, data_dir, args, augment):
         # choose the larger of CLI-provided fixed_seconds and observed max_dur
         computed_fixed_seconds = max(float(args.fixed_seconds), max_dur)
     args.fixed_seconds = computed_fixed_seconds
-    print(
+    logger.info(
         f"Computed fixed_seconds for dataset (max): {computed_fixed_seconds:.3f}s (label max={max_dur:.3f}s, cli={args.fixed_seconds})"
     )
 

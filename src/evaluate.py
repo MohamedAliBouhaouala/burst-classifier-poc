@@ -8,7 +8,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 import numpy as np
-import warnings
+import logging
 
 from helpers.common import load_model
 from helpers.constants import FULL, LABEL_MAP, INV_LABEL_MAP, LABELS, SPLIT_CHOICES
@@ -21,6 +21,9 @@ from utils.utils_visualize import (
     generate_plots_from_summary,
     generate_pr_and_calibration,
 )
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 def evaluate_cli(
@@ -72,7 +75,7 @@ def evaluate_cli(
     for audio in files:
         audio_path = os.path.join(data_dir, audio)
         if not os.path.exists(audio_path):
-            print(f"[WARN] audio missing, skipping: {audio_path}")
+            logger.warning(f"audio missing, skipping: {audio_path}")
             continue
         # get segments for this file
         segs = meta[meta["audio_file"] == audio].to_dict(orient="records")
@@ -94,13 +97,13 @@ def evaluate_cli(
                 top_k=top_k,
             )
         except Exception as e:
-            print(f"[ERROR] prediction failed for {audio}: {e}")
+            logger.warning(f"Prediction failed for {audio}: {e}")
             continue
 
         # preds is a list of window results (maybe multiple rows per window due to top_k expansion)
         # collapse preds into per-window unique windows, keeping probs vector
         # we only need one probs vector per window (per start,end)
-        window_map = {}  # (start,end) -> probs
+        window_map = {}
         for p in preds:
             # ensure audio_file matches
             if os.path.basename(p.get("audio_file", audio)) != os.path.basename(audio):
@@ -277,8 +280,8 @@ def cli(sys_argv):
 
     res = evaluate_cli(**vars(args))
 
-    print("Saved CSV:", res["csv_path"])
-    print("Saved report:", res["report_path"])
+    logger.info(f"Saved CSV: {res["csv_path"]}")
+    logger.info(f"Saved report: {res["report_path"]}")
 
 
 if __name__ == "__main__":

@@ -245,7 +245,7 @@ def train(meta, args_ns, device, artifacts_dir, tracker_obj, params, ds_hash, gi
     val_meta = val_meta.reset_index(drop=True)
 
     logging.info(
-        f"Training (none mode) on {len(train_meta)} samples, validating on {len(val_meta)} samples"
+        f"Training on {len(train_meta)} samples, validating on {len(val_meta)} samples"
         + (f", testing on {len(test_meta)} samples" if test_meta is not None else "")
     )
 

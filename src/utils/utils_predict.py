@@ -7,6 +7,7 @@ import numpy as np
 from torchaudio.transforms import MelSpectrogram
 
 from types import SimpleNamespace
+import warnings
 
 from helpers.common import resolve_settings, load_model_from_path
 from helpers.constants import INV_LABEL_MAP
@@ -47,7 +48,7 @@ def sliding_window_infer_model(
                 )
                 all_results.extend(res)
             except Exception as e:
-                print(f"[WARN] failed to infer on {p}: {e}")
+                warnings.warn("failed to infer on {p}: {e}")
                 continue
         return all_results
 

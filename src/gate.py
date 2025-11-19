@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import sys
 
-logger = logging.getLogger("gate")
+logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
@@ -17,7 +17,7 @@ def find_evaluation_report(eval_dir: str) -> Optional[Path]:
     """
     eval_path = Path(eval_dir)
     if not eval_path.exists() or not eval_path.is_dir():
-        logging.error("Evaluation directory not found: %s", eval_dir)
+        logger.error(f"Evaluation directory not found: {eval_dir}")
         return None
 
     # Common filenames
@@ -27,7 +27,7 @@ def find_evaluation_report(eval_dir: str) -> Optional[Path]:
         if candidate_path.exists():
             return candidate_path
 
-    logging.error("No evaluation report JSON found in directory: %s", eval_dir)
+    logger.error(f"No evaluation report JSON found in directory: {eval_dir}")
     return None
 
 
@@ -38,28 +38,28 @@ def gate_cli(eval_dir: str, metric: str, threshold: float):
     """
     report_path = find_evaluation_report(eval_dir)
     if not report_path:
-        logging.error("Failed to find evaluation report JSON in %s", eval_dir)
+        logger.error(f"Failed to find evaluation report JSON in {eval_dir}")
         return False
 
     try:
         report = json.loads(report_path.read_text())
     except Exception as e:
-        logging.error("Failed to parse evaluation report: %s", e)
+        logger.error(f"Failed to parse evaluation report: {e}")
         return False
 
     # Extract the metric value (simple version)
     value = report["metrics"].get(metric)
 
     if value is None:
-        logging.error(f"Metric {metric} not found in evaluation report.")
+        logger.error(f"Metric {metric} not found in evaluation report.")
         return False
 
-    logging.info(f"Metric {metric} = {value} (threshold = {threshold})")
+    logger.info(f"Metric {metric} = {value} (threshold = {threshold})")
     if value < threshold:
-        logging.warning(f"Gate failed: metric {metric} below threshold {threshold}.")
+        logger.warning(f"Gate failed: metric {metric} below threshold {threshold}.")
         return False
 
-    logging.info(f"Gate passed")
+    logger.info(f"Gate passed")
     return True
 
 
