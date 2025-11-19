@@ -149,8 +149,8 @@ def cli(sys_argv):
                     writer.writerow(
                         [
                             r.get("audio_file"),
-                            f"{r.get('start'):.6f}",
-                            f"{r.get('end'):.6f}",
+                            f"{r.get('start_seconds'):.6f}",
+                            f"{r.get('end_seconds'):.6f}",
                             r.get("label"),
                             f"{r.get('probability'):.6f}",
                         ]

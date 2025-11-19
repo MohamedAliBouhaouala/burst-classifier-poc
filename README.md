@@ -105,7 +105,7 @@ make docker-run MODEL_DIR=./artifacts_1 PORT=8000 HOST=0.0.0.0
 # Evaluation & Gating
 Model evaluation is run with make evaluate or the equivalent CLI command (cli.py evaluate). This produces eval_report.json along with plots such as the confusion matrix, PR curves, and calibration curves. Metrics include per-class precision/recall/F1, macro F1, and ECE.
 
-Gating is handled by a separate command, make gate, which reads the produced evaluation report and applies a simple single-metric threshold. If the metric falls below the configured threshold, the gate exits with a non-zero status. In future versions, the gate may become richer and support multi-metric rules, weighted conditions, or class-specific constraints.
+Gating is handled by a separate command, `make gate`, which reads the produced evaluation report and applies a simple single-metric threshold. If the metric falls below the configured threshold, the gate exits with a non-zero status. In future versions, the gate may become richer and support multi-metric rules, weighted conditions, or class-specific constraints.
 
 # Deployment & Traceability
 A FastAPI server exposes ``/predict``, ``batch_predict`` and ``/health`` endpoints and is container-ready. Each training run writes ``metadata.json`` with git commit, dataset manifest hashes, environment setup, hyperparameters, epoch logs, and evaluation metrics. When **MLflow/ClearML** is enabled, runs and artifacts are logged to a registry.

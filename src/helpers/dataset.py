@@ -71,8 +71,6 @@ def read_label_file(path: str, audio_filename: str) -> pd.DataFrame:
         return pd.DataFrame(
             columns=["audio_file", "start_seconds", "end_seconds", "label"]
         )
-    print(max(rows, key=lambda r: r["end_seconds"] - r["start_seconds"]))
-    print(max(r["end_seconds"] - r["start_seconds"] for r in rows))
     return pd.DataFrame(rows)
 
 
