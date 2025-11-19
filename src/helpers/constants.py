@@ -11,3 +11,5 @@ FULL = "FULL"
 SPLIT_CHOICES = [TRAINING, VALIDATION, TEST, FULL]
 
 REQUIRED_COLS = {"audio_file", "start_seconds", "end_seconds", "label"}
+
+AUDIO_EXTENSIONS = {".wav", ".flac", ".mp3", ".m4a", ".ogg", ".aiff", ".aif"}

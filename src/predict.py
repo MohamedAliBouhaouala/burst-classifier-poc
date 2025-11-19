@@ -5,10 +5,9 @@ import csv
 import os
 from typing import List, Dict, Any
 
+from helpers.constants import AUDIO_EXTENSIONS
 from helpers.common import load_model
 from utils.utils_predict import predict
-
-AUDIO_EXTS = {".wav", ".flac", ".mp3", ".m4a", ".ogg", ".aiff", ".aif"}
 
 
 def _gather_audio_paths(inputs: List[str], batch: bool = False) -> List[str]:
@@ -23,14 +22,14 @@ def _gather_audio_paths(inputs: List[str], batch: bool = False) -> List[str]:
             if batch:
                 for root, _, files in os.walk(p):
                     for fn in files:
-                        if os.path.splitext(fn)[1].lower() in AUDIO_EXTS:
+                        if os.path.splitext(fn)[1].lower() in AUDIO_EXTENSIONS:
                             out.append(os.path.join(root, fn))
             else:
                 for fn in os.listdir(p):
-                    if os.path.splitext(fn)[1].lower() in AUDIO_EXTS:
+                    if os.path.splitext(fn)[1].lower() in AUDIO_EXTENSIONS:
                         out.append(os.path.join(p, fn))
         elif os.path.isfile(p):
-            if os.path.splitext(p)[1].lower() in AUDIO_EXTS:
+            if os.path.splitext(p)[1].lower() in AUDIO_EXTENSIONS:
                 out.append(p)
             else:
                 # allow non-audio files to be passed but skip silently

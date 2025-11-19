@@ -1,14 +1,5 @@
 """
-Evaluation script that:
-- reads labelled segments from a data directory (wav + .txt label files),
-- selects a split (TRAINING / VALIDATION / TEST / FULL) using an optional split-map,
-- runs model inference (via helpers_predict.predict) over the audio files,
-- matches predicted windows to each ground-truth labelled segment using overlap-weighted averaging of probs,
-- computes metrics and saves JSON report + CSV of per-segment results.
-
-Usage examples:
-  python -m helpers.evaluate --model artifacts/best_model --data-dir data --out-dir results --split FULL
-  python -m helpers.evaluate --model artifacts/best_model --data-dir data --out-dir results --split TEST --split-map data/split_map.json
+Evaluation Helpers for POC Burst Classifier
 """
 
 import os

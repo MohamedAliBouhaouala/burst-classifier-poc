@@ -1,5 +1,5 @@
 """
-Prediction helpers for Burst Classifier POC (fixed + optimized).
+Prediction helpers for Burst Classifier POC
 """
 
 import os
