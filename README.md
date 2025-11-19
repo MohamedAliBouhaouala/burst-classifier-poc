@@ -111,7 +111,7 @@ Gating is handled by a separate command, make gate, which reads the produced eva
 A FastAPI server exposes ``/predict``, ``batch_predict`` and ``/health`` endpoints and is container-ready. Each training run writes ``metadata.json`` with git commit, dataset manifest hashes, environment setup, hyperparameters, epoch logs, and evaluation metrics. When **MLflow/ClearML** is enabled, runs and artifacts are logged to a registry.
 
 # Semi-automated Labelling & Feedback Loop
-Batch prelabeling produces ```prelabels.json`` with start_seconds/end_seconds, predicted class, and probability. The Streamlit annotator shows waveform + suggestions; annotators can accept or edit class and boundaries. Edits are saved with provenance (annotator id, timestamp, original suggestion). Corrected labels are collected into new dataset snapshots.
+Batch prelabeling produces ``prelabels.json`` with start_seconds/end_seconds, predicted class, and probability. The Streamlit annotator shows waveform + suggestions; annotators can accept or edit class and boundaries. Edits are saved with provenance (annotator id, timestamp, original suggestion). Corrected labels are collected into new dataset snapshots.
 
 # Additional considerations
 This section outlines future extensions that are not yet implemented but serve as guidance for further enhancements.
