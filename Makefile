@@ -26,7 +26,7 @@ all: train evaluate
 # --- Training / evaluation / gating ---
 train:
 	@echo "=== TRAIN ==="
-	python3 src/cli.py train --data-dir $(DATA_DIR) --artifacts-dir $(ARTIFACTS_DIR) --epochs 10 --batch-size $(BATCH_SIZE) --lr $(LEARNING_RATE) --epochs $(EPOCHS) --tracker $(TRACKER) --tracker-project $(TRACKER_PROJECT)
+	python3 src/cli.py train --data-dir $(DATA_DIR) --artifacts-dir $(ARTIFACTS_DIR) --epochs $(EPOCHS) --batch-size $(BATCH_SIZE) --lr $(LEARNING_RATE) --tracker $(TRACKER) --tracker-project $(TRACKER_PROJECT)
 
 evaluate:
 	@echo "=== EVALUATE ==="
@@ -36,7 +36,7 @@ gate: evaluate
 	@echo "=== GATE (threshold: $(GATE_THRESHOLD)) ==="
 	python3 src/gate.py --eval-dir $(ARTIFACTS_DIR)/eval/ --metric $(GATE_METRIC) --threshold $(GATE_THRESHOLD)
 
-# --- Prelabel / Annotator UI / retrain ---
+# --- Prelabel / Annotator UI ---
 prelabel:
 	@echo "=== PRELABEL (batch) ==="
 	python3 src/cli.py predict --model $(ARTIFACTS_DIR) --audio $(TEST_DATA) --out $(ARTIFACTS_DIR)/prelabels.json --device $(DEVICE) --tracker $(TRACKER) --tracker-project $(TRACKER_PROJECT) --tracker-task prelabeling-snapshots --batch
@@ -85,15 +85,18 @@ serve:
 
 help:
 	@echo "Makefile targets:"
-	@echo "  make train           # run training (POC)"
-	@echo "  make evaluate        # evaluate model on EVAL_DATA"
-	@echo "  make gate            # evaluate + gate using metrics JSON"
-	@echo "  make prelabel        # run bulk prelabeling on TEST_DATA"
-	@echo "  make label-ui        # start a dockerized streamlit annotator UI"
-	@echo "  make label-ui-stop   # stop a dockerized streamlit annotator UI app"
-	@echo "  make snapshot-labels # create local labels snapshot"
-	@echo "  make retrain         # retrain using labels/"
-	@echo "  make mlflow-start    # start mlflow server if tracker set to mlflow"
-	@echo "  make docker-build    # build docker image"
-	@echo "  make docker-run      # run docker image mounting model dir"
-	@echo "  make serve           # run python server locally"
+	@echo "  make train              # run training (POC)"
+	@echo "  make evaluate           # evaluate model on EVAL_DATA"
+	@echo "  make gate               # evaluate + gate using metrics JSON"
+	@echo "  make prelabel           # run bulk prelabeling on TEST_DATA"
+	@echo "  make label-ui           # start a dockerized streamlit annotator UI"
+	@echo "  make label-ui-stop      # stop a dockerized streamlit annotator UI app"
+	@echo "  make snapshot-labels    # create local labels snapshot"
+	@echo "  make mlflow-start       # start mlflow server if tracker set to mlflow"
+	@echo "  make mlflow-stop        # stop mlflow server if tracker set to mlflow"
+	@echo "  make docker-compose-up  # run docker-compose up for containerized serve API"
+	@echo "  make docker-compose-up  # run docker-compose down for containerized serve API"
+	@echo "  make docker-build       # build docker image"
+	@echo "  make docker-run         # run docker image mounting model dir"
+	@echo "  make docker-stop        # stop docker container"
+	@echo "  make serve              # run python server locally"

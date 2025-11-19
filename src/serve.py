@@ -23,7 +23,7 @@ from helpers.constants import LABEL_MAP, INV_LABEL_MAP
 from helpers.common import load_model
 from utils.utils_predict import predict
 
-logger = logging.getLogger("serve")
+logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 

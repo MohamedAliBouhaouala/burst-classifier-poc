@@ -5,9 +5,14 @@ import csv
 import os
 from typing import List, Dict, Any
 
+import logging
+
 from helpers.constants import AUDIO_EXTENSIONS
 from helpers.common import load_model
 from utils.utils_predict import predict
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 def _gather_audio_paths(inputs: List[str], batch: bool = False) -> List[str]:
@@ -33,9 +38,9 @@ def _gather_audio_paths(inputs: List[str], batch: bool = False) -> List[str]:
                 out.append(p)
             else:
                 # allow non-audio files to be passed but skip silently
-                print(f"[WARN] Skipping non-audio file: {p}")
+                logger.warn("Skipping non-audio file: {p}")
         else:
-            print(f"[WARN] Path not found, skipping: {p}")
+            logger.warn(f"Path not found, skipping: {p}")
     # keep deterministic ordering
     out = sorted(list(dict.fromkeys(out)))
     return out
@@ -155,7 +160,7 @@ def cli(sys_argv):
                             f"{r.get('probability'):.6f}",
                         ]
                     )
-            print(f"Wrote {len(res)} rows to {out_path}")
+            logger.info(f"Wrote {len(res)} rows to {out_path}")
         else:
             # treat out as JSON file path (if dir provided, create preds.json inside)
             out_path = args.out
@@ -164,10 +169,10 @@ def cli(sys_argv):
             os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
             with open(out_path, "w", encoding="utf-8") as fo:
                 json.dump({"audio_files": args.audio, "predictions": res}, fo, indent=2)
-            print(f"Wrote JSON with {len(res)} predictions to {out_path}")
+            logger.info(f"Wrote JSON with {len(res)} predictions to {out_path}")
     else:
         # print JSON to stdout
-        print(json.dumps(res, indent=2))
+        logger.info(json.dumps(res, indent=2))
 
 
 if __name__ == "__main__":

@@ -30,7 +30,7 @@ import getpass
 
 from helpers.constants import LABELS, REQUIRED_COLS
 
-st.set_page_config(layout="wide", page_title="Prelabel Review (Simple)")
+st.set_page_config(layout="wide", page_title="Prelabel Review")
 st.title("Prelabel Review & Correction")
 
 
@@ -271,7 +271,7 @@ with left:
 with right:
     st.markdown("### Filters & Active-Learning")
     low_conf_threshold = st.slider(
-        "Low-confidence threshold (probability <=)",
+        "Low-probability threshold (probability <=)",
         min_value=0.0,
         max_value=1.0,
         value=0.6,

@@ -38,11 +38,10 @@ from utils.utils_train import train
 from utils.utils_eval import save_confusion_matrix
 
 
-# basic logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
-# ----- Main train_cli that uses per-mode functions -----
 def train_cli(
     data_dir: str,
     artifacts_dir: str,
@@ -80,7 +79,7 @@ def train_cli(
     if meta.empty:
         raise SystemExit("No label files found in data-dir")
 
-    logging.info(
+    logger.info(
         f"Loaded {len(meta)} labeled segments from {meta['audio_file'].nunique()} audio files"
     )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -161,9 +160,9 @@ def train_cli(
                     "path": os.path.abspath(found),
                 }
             except Exception as e:
-                logging.warning("Failed to compute checksum for %s: %s", found, e)
+                logger.error("Failed to compute checksum for %s: %s", found, e)
         else:
-            logging.warning(
+            logger.warning(
                 "Model artifact listed but not found on disk (tried): %s", candidates
             )
 
@@ -181,7 +180,7 @@ def train_cli(
         if manifest:
             dataset_manifest_sha = compute_manifest_fingerprint(manifest)
     except Exception as e:
-        logging.warning("Failed to compute manifest fingerprint: %s", e)
+        logger.error("Failed to compute manifest fingerprint: %s", e)
 
     env_info = get_env_info()
 
@@ -215,7 +214,7 @@ def train_cli(
     except Exception:
         pass
 
-    logging.info("Training finished. Artifacts stored in %s", artifacts_dir)
+    logger.info("Training finished. Artifacts stored in %s", artifacts_dir)
 
 
 def cli(sys_argv):
