@@ -18,6 +18,22 @@ import sys
 import time
 import torch
 
+from constants import (
+    AUDIO_FILE,
+    START_SECONDS,
+    END_SECONDS,
+    LABEL,
+    PROBABILITY,
+    PROBABILITIES,
+    BURST,
+    MULTIPLE_BURST,
+    HARMONIC,
+    PREDICTIONS,
+    N_PREDICTIONS,
+    REQUEST_ID,
+    LATENCY,
+    N_FILES,
+)
 from helpers.constants import LABEL_MAP, INV_LABEL_MAP
 
 from helpers.common import load_model
@@ -50,7 +66,7 @@ def _format_prediction(
       audio_file, start_seconds, end_seconds, label, probability, b_probability, h_probability, mb_probability
     plus top_predictions when top_k>1.
     """
-    probs = win.get("probabilities", None)
+    probs = win.get(PROBABILITIES, None)
     C = len(LABEL_MAP)
     if probs is None:
         probs_arr = np.zeros(C, dtype=float)
@@ -66,7 +82,7 @@ def _format_prediction(
         probs_arr = probs_arr[:C]
 
     pred_idx = int(np.argmax(probs_arr)) if probs_arr.size > 0 else 0
-    predicted_label = INV_LABEL_MAP.get(pred_idx, win.get("label", ""))
+    predicted_label = INV_LABEL_MAP.get(pred_idx, win.get(LABEL, ""))
 
     top_pred_conf = float(probs_arr[pred_idx]) if probs_arr.size > 0 else 0.0
 
@@ -77,14 +93,14 @@ def _format_prediction(
         return float(probs_arr[idx])
 
     out = {
-        "audio_file": os.path.basename(audio_path),
-        "start_seconds": float(win.get("start_seconds", 0.0)),
-        "end_seconds": float(win.get("end_seconds", 0.0)),
-        "label": predicted_label,
-        "probability": top_pred_conf,
-        "b_probability": prob_for("b"),
-        "h_probability": prob_for("h"),
-        "mb_probability": prob_for("mb"),
+        AUDIO_FILE: os.path.basename(audio_path),
+        START_SECONDS: float(win.get(START_SECONDS, 0.0)),
+        END_SECONDS: float(win.get(END_SECONDS, 0.0)),
+        LABEL: predicted_label,
+        PROBABILITY: top_pred_conf,
+        f"{BURST}_{PROBABILITY}": prob_for(BURST),
+        f"{HARMONIC}_{PROBABILITY}": prob_for(HARMONIC),
+        f"{MULTIPLE_BURST}_{PROBABILITY}": prob_for(MULTIPLE_BURST),
     }
 
     if top_k and top_k > 1:
@@ -93,8 +109,8 @@ def _format_prediction(
             for i, p in enumerate(probs_arr.tolist())
         ]
         pairs_sorted = sorted(pairs, key=lambda x: x[1], reverse=True)[:top_k]
-        out["top_predictions"] = [
-            {"label": p[0], "probability": p[1]} for p in pairs_sorted
+        out[f"top_{PREDICTIONS}"] = [
+            {LABEL: p[0], PROBABILITY: p[1]} for p in pairs_sorted
         ]
 
     return out
@@ -139,15 +155,15 @@ def server(
             logger.info(
                 json.dumps(
                     {
-                        "request_id": request_id,
-                        "audio_file": os.path.basename(tmp_path),
-                        "n_predictions": len(out),
-                        "latency_seconds": latency,
+                        REQUEST_ID: request_id,
+                        AUDIO_FILE: os.path.basename(tmp_path),
+                        N_PREDICTIONS: len(out),
+                        LATENCY: latency,
                     }
                 )
             )
 
-            return {"predictions": out, "n_predictions": len(out)}
+            return {PREDICTIONS: out, N_PREDICTIONS: len(out)}
         except Exception as e:
             logger.error(f"Prediction failed: {e}\n{traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
@@ -182,15 +198,15 @@ def server(
             logger.info(
                 json.dumps(
                     {
-                        "request_id": request_id,
-                        "n_files": len(tmp_paths),
-                        "n_predictions": len(all_results),
-                        "latency_seconds": latency,
+                        REQUEST_ID: request_id,
+                        N_FILES: len(tmp_paths),
+                        N_PREDICTIONS: len(all_results),
+                        LATENCY: latency,
                     }
                 )
             )
 
-            return {"predictions": all_results, "n_predictions": len(all_results)}
+            return {PREDICTIONS: all_results, N_PREDICTIONS: len(all_results)}
         finally:
             # cleanup temp files
             for p in tmp_paths:

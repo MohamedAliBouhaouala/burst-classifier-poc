@@ -9,6 +9,22 @@ import warnings
 from sklearn.metrics import precision_recall_curve, auc, roc_curve, roc_auc_score
 from sklearn.calibration import calibration_curve
 
+from constants import (
+    PR_AUC,
+    ACCURACY,
+    MACRO_F1,
+    MICRO_F1,
+    F1,
+    PRECISION,
+    RECALL,
+    SUPPORT,
+    ACCURACY,
+    PER_CLASS,
+    ECE,
+    OVERALL,
+    METRICS,
+    SUMMARY,
+)
 from .common import _safe_mkdir, _num
 from .utils_eval import compute_ece_per_class
 
@@ -76,7 +92,7 @@ def generate_pr_and_calibration(
         fig.savefig(path_pr)
         plt.close(fig)
         results["pr_curves_png"] = path_pr
-        results["pr_auc_per_class"] = pr_aucs
+        results[f"{PR_AUC}_{PER_CLASS}"] = pr_aucs
         if tracker:
             try:
                 tracker.log_artifact(path_pr, name=os.path.basename(path_pr))
@@ -144,14 +160,14 @@ def generate_pr_and_calibration(
     try:
         ece_info = compute_ece_per_class(probs_arr, y_arr, n_bins=n_bins)
         # map class indices to names
-        ece_named = {"per_class": {}, "overall": ece_info.get("overall", float("nan"))}
-        for idx, v in ece_info.get("per_class", {}).items():
+        ece_named = {PER_CLASS: {}, OVERALL: ece_info.get(OVERALL, float("nan"))}
+        for idx, v in ece_info.get(PER_CLASS, {}).items():
             name = classes[int(idx)] if int(idx) < len(classes) else str(idx)
-            ece_named["per_class"][name] = float(v)
-        results["ece"] = ece_named
+            ece_named[PER_CLASS][name] = float(v)
+        results[ECE] = ece_named
     except Exception as e:
         warnings.warn(f"Failed compute ECE: {e}")
-        results["ece"] = {"per_class": {}, "overall": float("nan")}
+        results[ECE] = {PER_CLASS: {}, OVERALL: float("nan")}
 
     return results
 
@@ -185,26 +201,26 @@ def generate_plots_from_summary(
 
     # Normalize input
     ms = metrics_summary or {}
-    per_class = ms.get("per_class", {})
+    per_class = ms.get(PER_CLASS, {})
     classes = sorted(list(per_class.keys()))
     if not classes:
         raise ValueError("metrics_summary missing 'per_class' keys")
 
     # Extract arrays
-    precisions = [_num(per_class[c].get("precision", float("nan"))) for c in classes]
-    recalls = [_num(per_class[c].get("recall", float("nan"))) for c in classes]
-    f1s = [_num(per_class[c].get("f1", float("nan"))) for c in classes]
-    supports = [int(per_class[c].get("support", 0)) for c in classes]
+    precisions = [_num(per_class[c].get(PRECISION, float("nan"))) for c in classes]
+    recalls = [_num(per_class[c].get(RECALL, float("nan"))) for c in classes]
+    f1s = [_num(per_class[c].get(F1, float("nan"))) for c in classes]
+    supports = [int(per_class[c].get(SUPPORT, 0)) for c in classes]
 
     # PR AUC per class (may be missing)
-    pr_aucs_map = ms.get("pr_auc_per_class", {})
+    pr_aucs_map = ms.get(f"{PR_AUC}_{PER_CLASS}", {})
     pr_aucs = [_num(pr_aucs_map.get(c, float("nan"))) for c in classes]
 
     # Top-level metrics
-    macro_f1 = _num(ms.get("macro_f1", float("nan")))
-    micro_f1 = _num(ms.get("micro_f1", float("nan")))
-    accuracy = _num(ms.get("accuracy", float("nan")))
-    ece = _num(ms.get("ece", float("nan")))
+    macro_f1 = _num(ms.get(MACRO_F1, float("nan")))
+    micro_f1 = _num(ms.get(MICRO_F1, float("nan")))
+    accuracy = _num(ms.get(ACCURACY, float("nan")))
+    ece = _num(ms.get(ECE, float("nan")))
 
     # -----------------------
     # 1) Per-class grouped bars (precision, recall, f1)
@@ -213,9 +229,9 @@ def generate_plots_from_summary(
         fig, ax = plt.subplots(figsize=(max(6, len(classes) * 1.5), 4))
         x = np.arange(len(classes))
         width = 0.22
-        ax.bar(x - width, precisions, width=width, label="precision")
-        ax.bar(x, recalls, width=width, label="recall")
-        ax.bar(x + width, f1s, width=width, label="f1")
+        ax.bar(x - width, precisions, width=width, label=PRECISION)
+        ax.bar(x, recalls, width=width, label=RECALL)
+        ax.bar(x + width, f1s, width=width, label=F1)
         ax.set_xticks(x)
         ax.set_xticklabels(classes)
         ax.set_ylabel("Score")
@@ -223,10 +239,10 @@ def generate_plots_from_summary(
         ax.set_ylim(0.0, 1.0)
         ax.legend()
         fig.tight_layout()
-        p = os.path.join(out_dir, f"{prefix}_per_class_metrics.png")
+        p = os.path.join(out_dir, f"{prefix}_{PER_CLASS}_{METRICS}.png")
         fig.savefig(p)
         plt.close(fig)
-        saved["per_class_metrics"] = p
+        saved[f"{PER_CLASS}_{METRICS}"] = p
         if tracker:
             try:
                 tracker.log_artifact(p, name=os.path.basename(p))
@@ -245,17 +261,17 @@ def generate_plots_from_summary(
         ax.set_ylabel("Support (count)")
         ax.set_title("Per-class support")
         fig.tight_layout()
-        p = os.path.join(out_dir, f"{prefix}_class_support.png")
+        p = os.path.join(out_dir, f"{prefix}_class_{SUPPORT}.png")
         fig.savefig(p)
         plt.close(fig)
-        saved["class_support"] = p
+        saved[f"class_{SUPPORT}"] = p
         if tracker:
             try:
                 tracker.log_artifact(p, name=os.path.basename(p))
             except Exception:
                 pass
     except Exception as e:
-        warnings.warn(f"Failed class_support plot: {e}")
+        warnings.warn(f"Failed class_{SUPPORT} plot: {e}")
 
     # -----------------------
     # 3) PR-AUC per-class bar chart (if available)
@@ -276,10 +292,10 @@ def generate_plots_from_summary(
         ax.set_ylabel("PR AUC")
         ax.set_title("PR-AUC per class (from summary)")
         fig.tight_layout()
-        p = os.path.join(out_dir, f"{prefix}_pr_auc_per_class.png")
+        p = os.path.join(out_dir, f"{prefix}_{PR_AUC}_{PER_CLASS}.png")
         fig.savefig(p)
         plt.close(fig)
-        saved["pr_auc_per_class"] = p
+        saved[f"{PR_AUC}_{PER_CLASS}"] = p
         if tracker:
             try:
                 tracker.log_artifact(p, name=os.path.basename(p))
@@ -292,7 +308,7 @@ def generate_plots_from_summary(
     # 4) Global summary bar chart (accuracy / macro / micro / ece)
     # -----------------------
     try:
-        labels = ["accuracy", "macro_f1", "micro_f1", "ece"]
+        labels = [ACCURACY, MACRO_F1, MICRO_F1, ECE]
         vals = [accuracy, macro_f1, micro_f1, ece]
         # clamp ece to [0,1] for plotting sanity
         vals_plot = [(v if not (v is None or math.isnan(v)) else 0.0) for v in vals]
@@ -304,17 +320,17 @@ def generate_plots_from_summary(
             txt = "nan" if (v is None or math.isnan(v)) else f"{v:.3f}"
             ax.text(i, vals_plot[i] + 0.02, txt, ha="center")
         fig.tight_layout()
-        p = os.path.join(out_dir, f"{prefix}_summary_metrics.png")
+        p = os.path.join(out_dir, f"{prefix}_{SUMMARY}_{METRICS}.png")
         fig.savefig(p)
         plt.close(fig)
-        saved["summary_metrics"] = p
+        saved[f"{SUMMARY}_{METRICS}"] = p
         if tracker:
             try:
                 tracker.log_artifact(p, name=os.path.basename(p))
             except Exception:
                 pass
     except Exception as e:
-        warnings.warn(f"Failed summary_metrics plot: {e}")
+        warnings.warn(f"Failed {SUMMARY}_{METRICS} plot: {e}")
 
     # -----------------------
     # 5) Radar / spider chart for per-class precision/recall/f1 (normalized)
@@ -337,10 +353,10 @@ def generate_plots_from_summary(
         ax.set_title("Per-class F1 (radar)")
         ax.set_ylim(0.0, 1.0)
         fig.tight_layout()
-        p = os.path.join(out_dir, f"{prefix}_per_class_f1_radar.png")
+        p = os.path.join(out_dir, f"{prefix}_{PER_CLASS}_{F1}_radar.png")
         fig.savefig(p)
         plt.close(fig)
-        saved["per_class_f1_radar"] = p
+        saved[f"{PER_CLASS}_{F1}_radar"] = p
         if tracker:
             try:
                 tracker.log_artifact(p, name=os.path.basename(p))
@@ -353,10 +369,10 @@ def generate_plots_from_summary(
     # 6) Export CSV summary (one row per class and overall metrics)
     # -----------------------
     try:
-        csv_path = os.path.join(out_dir, f"{prefix}_summary_table.csv")
+        csv_path = os.path.join(out_dir, f"{prefix}_{SUMMARY}_table.csv")
         with open(csv_path, "w", newline="", encoding="utf-8") as fh:
             writer = csv.writer(fh)
-            writer.writerow(["class", "precision", "recall", "f1", "support", "pr_auc"])
+            writer.writerow(["class", PRECISION, RECALL, F1, SUPPORT, PR_AUC])
             for i, c in enumerate(classes):
                 writer.writerow(
                     [
@@ -372,16 +388,16 @@ def generate_plots_from_summary(
             writer.writerow([])
             writer.writerow(["metric", "value"])
             writer.writerow(
-                ["accuracy", f"{accuracy:.6f}" if not math.isnan(accuracy) else ""]
+                [ACCURACY, f"{accuracy:.6f}" if not math.isnan(accuracy) else ""]
             )
             writer.writerow(
-                ["macro_f1", f"{macro_f1:.6f}" if not math.isnan(macro_f1) else ""]
+                [MACRO_F1, f"{macro_f1:.6f}" if not math.isnan(macro_f1) else ""]
             )
             writer.writerow(
-                ["micro_f1", f"{micro_f1:.6f}" if not math.isnan(micro_f1) else ""]
+                [MICRO_F1, f"{micro_f1:.6f}" if not math.isnan(micro_f1) else ""]
             )
-            writer.writerow(["ece", f"{ece:.6f}" if not math.isnan(ece) else ""])
-        saved["summary_csv"] = csv_path
+            writer.writerow([ECE, f"{ece:.6f}" if not math.isnan(ece) else ""])
+        saved[f"{SUMMARY}_csv"] = csv_path
         if tracker:
             try:
                 tracker.log_artifact(csv_path, name=os.path.basename(csv_path))

@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 import numpy as np
 import random
+from constants import START_SECONDS, END_SECONDS
 from .constants import SEED
 from dataset import SegmentDataset
 
@@ -19,9 +20,7 @@ def set_seed(seed=SEED):
 
 def prepare_loader_from_meta(meta_df, data_dir, args, augment):
     durations = (
-        (meta_df["end_seconds"] - meta_df["start_seconds"])
-        .astype(float)
-        .clip(lower=1e-6)
+        (meta_df[END_SECONDS] - meta_df[START_SECONDS]).astype(float).clip(lower=1e-6)
     )
     if durations.empty:
         computed_fixed_seconds = float(args.fixed_seconds)  # fallback

@@ -26,6 +26,41 @@ from models.model import SmallCNN
 from helpers.helpers_preprocess import set_seed
 from tracker import TrackerFactory
 
+from constants import (
+    BATCH_SIZE,
+    EPOCHS,
+    LEARNING_RATE,
+    VALIDATION,
+    TEST,
+    SPLIT,
+    N_MELS,
+    FIXED_SECONDS,
+    AUDIO_FILE,
+    LABEL,
+    ARTIFACT,
+    ARTIFACTS,
+    CHECKSUMS,
+    DATASET,
+    ENV,
+    GIT,
+    HASH,
+    MANIFEST,
+    SHA,
+    SHA256,
+    SIZE,
+    PATH,
+    MODEL,
+    PARAMETERS,
+    METADATA,
+    CREATED_AT,
+    LOCAL,
+    COUNTS,
+    HOST,
+    PLATFORM,
+    TRACKER,
+    N_SEGEMENTS,
+)
+
 from utils.common import (
     compute_manifest_fingerprint,
     dataset_hash,
@@ -72,7 +107,7 @@ def train_cli(
         meta, data_dir, artifacts_dir
     )
     try:
-        tracker_obj.log_artifact(manifest_path, name="dataset_manifest")
+        tracker_obj.log_artifact(manifest_path, name=f"{DATASET}_{MANIFEST}")
     except Exception:
         pass
 
@@ -80,7 +115,7 @@ def train_cli(
         raise SystemExit("No label files found in data-dir")
 
     logger.info(
-        f"Loaded {len(meta)} labeled segments from {meta['audio_file'].nunique()} audio files"
+        f"Loaded {len(meta)} labeled segments from {meta[AUDIO_FILE].nunique()} audio files"
     )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -106,13 +141,13 @@ def train_cli(
         save_epoch_checkpoints=save_epoch_checkpoints,
     )
     params = {
-        "epochs": epochs,
-        "batch_size": batch_size,
-        "lr": lr,
-        "fixed_seconds": fixed_seconds,
-        "n_mels": n_mels,
-        "val_split": val_split,
-        "test_split": test_split,
+        EPOCHS: epochs,
+        BATCH_SIZE: batch_size,
+        LEARNING_RATE: lr,
+        FIXED_SECONDS: fixed_seconds,
+        N_MELS: n_mels,
+        f"{VALIDATION}_{SPLIT}": val_split,
+        f"{TEST}_{SPLIT}": test_split,
     }
 
     artifacts_acc.extend(
@@ -122,19 +157,19 @@ def train_cli(
     )
 
     new_params = {
-        "epochs": args_ns.epochs,
-        "batch_size": args_ns.batch_size,
-        "lr": args_ns.lr,
-        "fixed_seconds": args_ns.fixed_seconds,
-        "n_mels": args_ns.n_mels,
-        "val_split": args_ns.val_split,
-        "test_split": args_ns.test_split,
+        EPOCHS: args_ns.epochs,
+        BATCH_SIZE: args_ns.batch_size,
+        LEARNING_RATE: args_ns.lr,
+        FIXED_SECONDS: args_ns.fixed_seconds,
+        N_MELS: args_ns.n_mels,
+        f"{VALIDATION}_{SPLIT}": args_ns.val_split,
+        f"{TEST}_{SPLIT}": args_ns.test_split,
     }
 
     # --- add artifact checksums (artifact_sha256, artifact_size) for each artifact entry if possible ---
     artifacts_checksums = {}
     for a in artifacts_acc:
-        model_path = a.get("model_path")
+        model_path = a.get(f"{MODEL}_{PATH}")
         if not model_path:
             continue
         # try to resolve model file: absolute, relative to artifacts_dir, or literal path
@@ -152,12 +187,12 @@ def train_cli(
         if found:
             try:
                 sha, size = sha256_file(found)
-                a["artifact_sha256"] = sha
-                a["artifact_size"] = size
+                a[f"{ARTIFACT}_{SHA256}"] = sha
+                a[f"{ARTIFACT}_{SIZE}"] = size
                 artifacts_checksums[os.path.basename(found)] = {
-                    "sha256": sha,
-                    "size": size,
-                    "path": os.path.abspath(found),
+                    SHA256: sha,
+                    SIZE: size,
+                    PATH: os.path.abspath(found),
                 }
             except Exception as e:
                 logger.error("Failed to compute checksum for %s: %s", found, e)
@@ -185,26 +220,28 @@ def train_cli(
     env_info = get_env_info()
 
     metadata = {
-        "git_sha": git_sha,
-        "git_dirty_hint": False if git_sha != "local" else True,
-        "dataset_hash": ds_hash,
-        "dataset_manifest": os.path.basename(manifest_path) if manifest_path else None,
-        "dataset_manifest_sha": dataset_manifest_sha,
-        "artifacts": artifacts_acc,
-        "artifacts_checksums": artifacts_checksums,
-        "created_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "params": new_params,
-        "n_segments": int(len(meta)) if meta is not None else None,
-        "label_counts": manifest.get("label_counts") if manifest else None,
-        "env": env_info,
-        "tracker": tracker_meta,
-        "host": socket.gethostname(),
-        "platform": platform.platform(),
+        f"{GIT}_{SHA}": git_sha,
+        f"{GIT}_dirty_hint": False if git_sha != LOCAL else True,
+        f"{DATASET}_{HASH}": ds_hash,
+        f"{DATASET}_{MANIFEST}": (
+            os.path.basename(manifest_path) if manifest_path else None
+        ),
+        f"{DATASET}_{MANIFEST}_{SHA}": dataset_manifest_sha,
+        ARTIFACTS: artifacts_acc,
+        f"{ARTIFACTS}_{CHECKSUMS}": artifacts_checksums,
+        CREATED_AT: datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        PARAMETERS: new_params,
+        N_SEGEMENTS: int(len(meta)) if meta is not None else None,
+        f"{LABEL}_{COUNTS}": manifest.get(f"{LABEL}_{COUNTS}") if manifest else None,
+        ENV: env_info,
+        TRACKER: tracker_meta,
+        HOST: socket.gethostname(),
+        PLATFORM: platform.platform(),
     }
-    save_json(os.path.join(artifacts_dir, "metadata.json"), metadata)
+    save_json(os.path.join(artifacts_dir, f"{METADATA}.json"), metadata)
     try:
         tracker_obj.log_artifact(
-            os.path.join(artifacts_dir, "metadata.json"), name="metadata.json"
+            os.path.join(artifacts_dir, f"{METADATA}.json"), name=f"{METADATA}.json"
         )
         tracker_obj.log_artifact(results_path, name=os.path.basename(results_path))
     except Exception:

@@ -9,6 +9,20 @@ import logging
 from models.model import SmallCNN
 from tracker import TrackerFactory
 
+from constants import (
+    BATCH_SIZE,
+    N_MELS,
+    FIXED_SECONDS,
+    WINDOW_SECONDS,
+    SR,
+    SAMPLING_RATE,
+    MODEL,
+    PATH,
+    METADATA,
+    ARTIFACT,
+    PARAMETERS,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,7 +36,7 @@ def resolve_settings(metadata: dict, args):
     """
     params = {}
     if metadata and isinstance(metadata, dict):
-        params = metadata.get("params", {}) or {}
+        params = metadata.get(PARAMETERS, {}) or {}
 
     # helper: prefer params[param_key] if present & valid, else CLI cli_attr if provided & valid, else default
     def pick_float(cli_attr, param_key, default):
@@ -61,12 +75,12 @@ def resolve_settings(metadata: dict, args):
         return int(default)
 
     # window_seconds: prefer metadata.fixed_seconds then CLI then default
-    window_seconds = pick_float("window_seconds", "fixed_seconds", 0.5)
+    window_seconds = pick_float(WINDOW_SECONDS, FIXED_SECONDS, 0.5)
 
     # sample rate: try multiple possible names in metadata.params first, then CLI, then fallback 22050
     sr = None
     # try metadata keys
-    for key in ("sample_rate", "sr", "sampling_rate"):
+    for key in (SAMPLING_RATE, SR):
         v = params.get(key, None)
         if v is not None:
             try:
@@ -75,27 +89,27 @@ def resolve_settings(metadata: dict, args):
             except Exception:
                 sr = None
     # if metadata didn't provide sr, try CLI
-    if sr is None and hasattr(args, "sr") and getattr(args, "sr") is not None:
+    if sr is None and hasattr(args, SR) and getattr(args, SR) is not None:
         try:
-            sr = int(getattr(args, "sr"))
+            sr = int(getattr(args, SR))
         except Exception:
             sr = None
     if sr is None:
         sr = 22050
 
-    n_mels = pick_int("n_mels", "n_mels", 64)
-    batch_size = pick_int("batch_size", "batch_size", 64)
+    n_mels = pick_int(N_MELS, N_MELS, 64)
+    batch_size = pick_int(BATCH_SIZE, BATCH_SIZE, 64)
 
     resolved = {
-        "window_seconds": float(window_seconds),
-        "sr": int(sr),
-        "n_mels": int(n_mels),
-        "batch_size": int(batch_size),
+        WINDOW_SECONDS: float(window_seconds),
+        SR: int(sr),
+        N_MELS: int(n_mels),
+        BATCH_SIZE: int(batch_size),
     }
     logger.info(
         f"prediction settings resolved (metadata.params preferred):"
-        f"window_seconds={resolved['window_seconds']},"
-        f"sr={resolved['sr']}, n_mels={resolved['n_mels']}, batch_size={resolved['batch_size']}"
+        f"{WINDOW_SECONDS}={resolved[WINDOW_SECONDS]},"
+        f"{SR}={resolved[SR]}, {N_MELS}={resolved[N_MELS]}, {BATCH_SIZE}={resolved[BATCH_SIZE]}"
     )
     return resolved
 
@@ -138,7 +152,7 @@ def load_model_from_path(path: str, device: torch.device):
 
     # try to load metadata.json if present
     meta_from_file = {}
-    meta_path = os.path.join(path, "metadata.json")
+    meta_path = os.path.join(path, f"{METADATA}.json")
     if os.path.exists(meta_path):
         try:
             with open(meta_path, "r", encoding="utf-8") as fh:
@@ -154,10 +168,10 @@ def load_model_from_path(path: str, device: torch.device):
     state = None
     if isinstance(ckpt, dict):
         for k in (
-            "model_state",
+            f"{MODEL}_state",
             "state_dict",
-            "model",
-            "model_state_dict",
+            f"{MODEL}",
+            f"{MODEL}_state_dict",
             "net_state_dict",
         ):
             if k in ckpt and isinstance(ckpt[k], dict):
@@ -198,7 +212,7 @@ def load_model_from_path(path: str, device: torch.device):
     meta = {}
     if isinstance(ckpt, dict):
         # Try to get metadata from checkpoint if available
-        meta_ckpt = ckpt.get("metadata") or ckpt.get("meta") or {}
+        meta_ckpt = ckpt.get(METADATA) or ckpt.get("meta") or {}
         if isinstance(meta_ckpt, dict):
             # Give priority to metadata.json over checkpoint metadata
             meta.update(meta_ckpt or {})
@@ -211,9 +225,9 @@ def load_model_from_path(path: str, device: torch.device):
         meta.update(meta_from_file or {})
 
     # Always attach traceability info
-    meta.setdefault("checkpoint_path", os.path.abspath(ckpt_path))
+    meta.setdefault(f"checkpoint_{PATH}", os.path.abspath(ckpt_path))
     if meta_from_file:
-        meta.setdefault("metadata_file", os.path.abspath(meta_path))
+        meta.setdefault(f"{METADATA}_file", os.path.abspath(meta_path))
 
     # move model and set eval
     model.to(device)
@@ -229,7 +243,12 @@ def try_fetch_model_via_tracker(
     Try common tracker download methods. Return local path or None.
     """
     # try typical method names, best-effort
-    methods = ["download_model", "get_model_path", "download_artifact", "download"]
+    methods = [
+        f"download_{MODEL}",
+        f"get_{MODEL}_{PATH}",
+        f"download_{ARTIFACT}",
+        "download",
+    ]
     for m in methods:
         if hasattr(tracker, m):
             try:

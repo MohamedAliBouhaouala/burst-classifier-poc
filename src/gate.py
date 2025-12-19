@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import sys
 
+from constants import METRICS
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
@@ -48,7 +50,7 @@ def gate_cli(eval_dir: str, metric: str, threshold: float):
         return False
 
     # Extract the metric value (simple version)
-    value = report["metrics"].get(metric)
+    value = report[METRICS].get(metric)
 
     if value is None:
         logger.error(f"Metric {metric} not found in evaluation report.")

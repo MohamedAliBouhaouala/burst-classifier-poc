@@ -3,6 +3,7 @@ version: "3.9"
 services:
   serve-api:
     container_name: label-ui
+    # image: burst-classifier-serve:main
     build:
       context: ./
     env_file: ./.env

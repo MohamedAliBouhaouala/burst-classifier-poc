@@ -19,6 +19,7 @@ from sklearn.metrics import (
 )
 import warnings
 
+from constants import AUDIO_FILE
 from helpers.dataset import build_meta_from_dir, LABEL_MAP, INV_LABEL_MAP
 from helpers.constants import LABELS, LABEL_IDX, FULL
 
@@ -58,6 +59,6 @@ def filter_meta_by_split(meta_df, split_map: Dict[str, str], split_choice: str):
     # filter
     import pandas as pd
 
-    return meta_df[
-        meta_df["audio_file"].map(os.path.basename).isin(allowed)
-    ].reset_index(drop=True)
+    return meta_df[meta_df[AUDIO_FILE].map(os.path.basename).isin(allowed)].reset_index(
+        drop=True
+    )
