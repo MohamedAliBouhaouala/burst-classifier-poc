@@ -29,8 +29,6 @@ from constants import (
     MULTIPLE_BURST,
     HARMONIC,
     PREDICTIONS,
-    N_PREDICTIONS,
-    REQUEST_ID,
     LATENCY,
     N_FILES,
 )
@@ -136,7 +134,6 @@ def server(
     @app.post("/predict")
     async def predict_endpoint(file: UploadFile = File(...)):
         tmp_path = None
-        request_id = str(uuid.uuid4())
         start_ts = time.time()
         try:
             tmp_path = _safe_save_upload(
@@ -155,15 +152,13 @@ def server(
             logger.info(
                 json.dumps(
                     {
-                        REQUEST_ID: request_id,
                         AUDIO_FILE: os.path.basename(tmp_path),
-                        N_PREDICTIONS: len(out),
                         LATENCY: latency,
                     }
                 )
             )
 
-            return {PREDICTIONS: out, N_PREDICTIONS: len(out)}
+            return {PREDICTIONS: out, f"n_{PREDICTIONS}": len(out)}
         except Exception as e:
             logger.error(f"Prediction failed: {e}\n{traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
@@ -178,7 +173,6 @@ def server(
     async def batch_predict_endpoint(files: List[UploadFile] = File(...)):
         tmp_paths: List[str] = []
         all_results: List[Dict[str, Any]] = []
-        request_id = str(uuid.uuid4())
         start_ts = time.time()
         try:
             # save all uploads temporarily
@@ -198,15 +192,13 @@ def server(
             logger.info(
                 json.dumps(
                     {
-                        REQUEST_ID: request_id,
                         N_FILES: len(tmp_paths),
-                        N_PREDICTIONS: len(all_results),
                         LATENCY: latency,
                     }
                 )
             )
 
-            return {PREDICTIONS: all_results, N_PREDICTIONS: len(all_results)}
+            return {PREDICTIONS: all_results, f"n_{PREDICTIONS}": len(all_results)}
         finally:
             # cleanup temp files
             for p in tmp_paths:

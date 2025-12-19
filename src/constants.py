@@ -10,7 +10,6 @@ PROBABILITIES = "probabilities"
 PROBABILITY = "probability"
 PER_CLASS = "per_class"
 PREDICTIONS = "predictions"
-N_PREDICTIONS = "n_predictions"
 OVERALL = "overall"
 
 ACCURACY = "accuracy"
