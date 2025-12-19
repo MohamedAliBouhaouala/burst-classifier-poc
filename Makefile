@@ -19,7 +19,9 @@ EPOCHS ?= 1
 TRACKER ?= mlflow
 TRACKER_PROJECT ?= Burst_Classifier_POC
 
-.PHONY: all train evaluate gate prelabel label-ui label-ui-stop snapshot-labels retrain mlflow-start mlflow-stop docker-build docker-run docker-stop docker-push docker-compose-up docker-compose-down serve demo clean help
+LABEL_UI_PORT ?= 8501
+
+.PHONY: all train evaluate gate prelabel label-ui label-ui-stop label-ui-destroy mlflow-start mlflow-stop docker-build docker-compose-up docker-compose-down serve help
 
 all: train evaluate
 
@@ -43,11 +45,15 @@ prelabel:
 
 label-ui:
 	@echo "=== START LABEL UI ==="
-	docker compose -f docker-compose.streamlit.yml up -d
+	docker run -d --name label-ui -v $(TEST_DATA):/app/data -v ./src:/app/src  -p $(LABEL_UI_PORT):8501 $(IMAGE):$(TAG) streamlit run /app/src/label_ui.py
 
 label-ui-stop:
 	@echo "=== STOP LABEL UI ==="
-	docker compose -f docker-compose.streamlit.yml down
+	docker stop label-ui
+
+label-ui-destroy:
+	@echo "== DESTROY LABEL UI=="
+	docker rm -v label-ui
 
 # Mlflow, use only if tracker set to mlflow
 mlflow-start:
@@ -60,16 +66,6 @@ mlflow-stop:
 docker-build:
 	@echo "=== DOCKER BUILD ==="
 	docker build -t $(IMAGE):$(TAG) .
-
-docker-run: docker-build
-	@echo "=== DOCKER RUN (mount model dir) ==="
-	mkdir -p $(MODEL_DIR)
-	docker run --rm -d --name $(IMAGE)-run -p $(PORT):8000 -v $(PWD)/$(MODEL_DIR):/models:ro $(IMAGE):$(TAG) --model /models --device $(DEVICE) --port $(PORT)
-
-docker-stop:
-	@echo "=== DOCKER STOP ==="
-	-docker stop $(IMAGE)-run || true
-	-docker rm $(IMAGE)-run || true
 
 docker-compose-up:
 	@echo "=== DOCKER-COMPOSE UP ==="
@@ -91,12 +87,9 @@ help:
 	@echo "  make prelabel           # run bulk prelabeling on TEST_DATA"
 	@echo "  make label-ui           # start a dockerized streamlit annotator UI"
 	@echo "  make label-ui-stop      # stop a dockerized streamlit annotator UI app"
-	@echo "  make snapshot-labels    # create local labels snapshot"
 	@echo "  make mlflow-start       # start mlflow server if tracker set to mlflow"
 	@echo "  make mlflow-stop        # stop mlflow server if tracker set to mlflow"
 	@echo "  make docker-compose-up  # run docker-compose up for containerized serve API"
 	@echo "  make docker-compose-up  # run docker-compose down for containerized serve API"
 	@echo "  make docker-build       # build docker image"
-	@echo "  make docker-run         # run docker image mounting model dir"
-	@echo "  make docker-stop        # stop docker container"
 	@echo "  make serve              # run python server locally"
