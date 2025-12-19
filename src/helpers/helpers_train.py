@@ -3,12 +3,13 @@ from sklearn.metrics import accuracy_score
 import torch
 from torch import nn, optim
 
+from constants import LABEL
 from .constants import LABEL_MAP
 
 
 def compute_class_weights(meta, label_map, device):
     counts = (
-        meta["label"]
+        meta[LABEL]
         .map(label_map)
         .value_counts()
         .reindex([0, 1, 2])

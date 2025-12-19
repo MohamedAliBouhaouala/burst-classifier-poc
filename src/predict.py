@@ -7,6 +7,15 @@ from typing import List, Dict, Any
 
 import logging
 
+from constants import (
+    AUDIO_FILE,
+    AUDIO_FILES,
+    START_SECONDS,
+    END_SECONDS,
+    LABEL,
+    PROBABILITY,
+    PREDICTIONS,
+)
 from helpers.constants import AUDIO_EXTENSIONS
 from helpers.common import load_model
 from utils.utils_predict import predict
@@ -136,28 +145,28 @@ def cli(sys_argv):
             # if out is a dir, write to out/preds.csv
             out_path = args.out
             if os.path.isdir(out_path):
-                out_path = os.path.join(out_path, "preds.csv")
+                out_path = os.path.join(out_path, f"{PREDICTIONS}.csv")
             # ensure parent dir exists
             os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
             with open(out_path, "w", newline="", encoding="utf-8") as fo:
                 writer = csv.writer(fo)
                 writer.writerow(
                     [
-                        "audio_file",
-                        "start_seconds",
-                        "end_seconds",
-                        "label",
-                        "probability",
+                        AUDIO_FILE,
+                        START_SECONDS,
+                        END_SECONDS,
+                        LABEL,
+                        PROBABILITY,
                     ]
                 )
                 for r in res:
                     writer.writerow(
                         [
-                            r.get("audio_file"),
-                            f"{r.get('start_seconds'):.6f}",
-                            f"{r.get('end_seconds'):.6f}",
-                            r.get("label"),
-                            f"{r.get('probability'):.6f}",
+                            r.get(AUDIO_FILE),
+                            f"{r.get(START_SECONDS):.6f}",
+                            f"{r.get(END_SECONDS):.6f}",
+                            r.get(LABEL),
+                            f"{r.get(PROBABILITY):.6f}",
                         ]
                     )
             logger.info(f"Wrote {len(res)} rows to {out_path}")
@@ -165,10 +174,10 @@ def cli(sys_argv):
             # treat out as JSON file path (if dir provided, create preds.json inside)
             out_path = args.out
             if os.path.isdir(out_path):
-                out_path = os.path.join(out_path, "preds.json")
+                out_path = os.path.join(out_path, f"{PREDICTIONS}.json")
             os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
             with open(out_path, "w", encoding="utf-8") as fo:
-                json.dump({"audio_files": args.audio, "predictions": res}, fo, indent=2)
+                json.dump({AUDIO_FILES: args.audio, PREDICTIONS: res}, fo, indent=2)
             logger.info(f"Wrote JSON with {len(res)} predictions to {out_path}")
     else:
         # print JSON to stdout

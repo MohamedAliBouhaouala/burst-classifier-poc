@@ -29,6 +29,26 @@ import zipfile
 import getpass
 
 from helpers.constants import LABELS, REQUIRED_COLS
+from constants import (
+    AUDIO_FILE,
+    START_SECONDS,
+    END_SECONDS,
+    LABEL,
+    CORRECTED_LABEL,
+    PREDICTIONS,
+    PROBABILITY,
+    LOW_CONFIDENCE,
+    METADATA,
+    CREATED_AT,
+    ANNOTATOR,
+    ANNOTATOR_ID,
+    N_SEGMENTS_WRITTEN,
+    N_ITEMS,
+    MISSING_AUDIO_FILES,
+    ACTION,
+    COMMENT,
+    TIMESTAMP,
+)
 
 st.set_page_config(layout="wide", page_title="Prelabel Review")
 st.title("Prelabel Review & Correction")
@@ -67,10 +87,10 @@ def load_json_from_uploaded(uploaded) -> pd.DataFrame:
 
     if (
         isinstance(doc, dict)
-        and "predictions" in doc
-        and isinstance(doc["predictions"], list)
+        and PREDICTIONS in doc
+        and isinstance(doc[PREDICTIONS], list)
     ):
-        df = pd.DataFrame(doc["predictions"])
+        df = pd.DataFrame(doc[PREDICTIONS])
         return df
     if isinstance(doc, list):
         df = pd.DataFrame(doc)
@@ -99,10 +119,10 @@ def load_from_dir(path: str) -> pd.DataFrame:
                 doc = json.load(fh)
             if (
                 isinstance(doc, dict)
-                and "predictions" in doc
-                and isinstance(doc["predictions"], list)
+                and PREDICTIONS in doc
+                and isinstance(doc[PREDICTIONS], list)
             ):
-                dfs.append(pd.DataFrame(doc["predictions"]))
+                dfs.append(pd.DataFrame(doc[PREDICTIONS]))
             elif isinstance(doc, list):
                 dfs.append(pd.DataFrame(doc))
             else:
@@ -130,16 +150,16 @@ def validate_and_normalize(df: pd.DataFrame) -> pd.DataFrame:
         st.error(f"Input missing required columns (must be exact names): {missing}")
         return pd.DataFrame()
     df = df.copy()
-    df["start_seconds"] = pd.to_numeric(df["start_seconds"], errors="coerce")
-    df["end_seconds"] = pd.to_numeric(df["end_seconds"], errors="coerce")
-    df = df.dropna(subset=["start_seconds", "end_seconds"])
-    df = df[df["end_seconds"] > df["start_seconds"]]
-    if "probability" in df.columns:
-        df["probability"] = pd.to_numeric(df["probability"], errors="coerce")
+    df[START_SECONDS] = pd.to_numeric(df[START_SECONDS], errors="coerce")
+    df[END_SECONDS] = pd.to_numeric(df[END_SECONDS], errors="coerce")
+    df = df.dropna(subset=[START_SECONDS, END_SECONDS])
+    df = df[df[END_SECONDS] > df[START_SECONDS]]
+    if PROBABILITY in df.columns:
+        df[PROBABILITY] = pd.to_numeric(df[PROBABILITY], errors="coerce")
     else:
-        df["probability"] = np.nan
-    df["audio_file"] = df["audio_file"].astype(str)
-    df["label"] = df["label"].astype(str)
+        df[PROBABILITY] = np.nan
+    df[AUDIO_FILE] = df[AUDIO_FILE].astype(str)
+    df[LABEL] = df[LABEL].astype(str)
     df = df.reset_index(drop=True)
     return df
 
@@ -177,10 +197,10 @@ def export_corrections_package(
     written_count = 0
 
     for i, row in corrections_df.reset_index(drop=True).iterrows():
-        orig_rel = str(row.get("audio_file", ""))
-        start = float(row.get("start_seconds", 0.0))
-        end = float(row.get("end_seconds", 0.0))
-        label = str(row.get("corrected_label", row.get("label", ""))).strip()
+        orig_rel = str(row.get(AUDIO_FILE, ""))
+        start = float(row.get(START_SECONDS, 0.0))
+        end = float(row.get(END_SECONDS, 0.0))
+        label = str(row.get(CORRECTED_LABEL, row.get(LABEL, ""))).strip()
         orig_path = os.path.join(audio_root, orig_rel)
 
         audio_basename = Path(orig_rel).stem
@@ -222,13 +242,13 @@ def export_corrections_package(
 
     # write metadata
     meta = {
-        "annotator": annotator,
-        "created_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "n_items": int(len(corrections_df)),
-        "n_segments_written": int(written_count),
-        "missing_audio_files": missing_audio[:50],
+        ANNOTATOR: annotator,
+        CREATED_AT: datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        N_ITEMS: int(len(corrections_df)),
+        N_SEGMENTS_WRITTEN: int(written_count),
+        MISSING_AUDIO_FILES: missing_audio[:50],
     }
-    with open(tmpdir / "metadata.json", "w", encoding="utf-8") as fh:
+    with open(tmpdir / f"{METADATA}.json", "w", encoding="utf-8") as fh:
         json.dump(meta, fh, indent=2)
 
     # zip it
@@ -318,26 +338,22 @@ if st.session_state.df.empty:
 
 # compute low-confidence flag
 df_all = st.session_state.df.copy()
-df_all["probability"] = pd.to_numeric(
-    df_all.get("probability", np.nan), errors="coerce"
-)
-df_all["low_confidence"] = df_all["probability"].fillna(0.0) <= float(
-    low_conf_threshold
-)
+df_all[PROBABILITY] = pd.to_numeric(df_all.get(PROBABILITY, np.nan), errors="coerce")
+df_all[LOW_CONFIDENCE] = df_all[PROBABILITY].fillna(0.0) <= float(low_conf_threshold)
 
 # apply filters
 df_filtered = df_all.copy()
 if filename_filter:
     df_filtered = df_filtered[
-        df_filtered["audio_file"].str.contains(filename_filter, na=False)
+        df_filtered[AUDIO_FILE].str.contains(filename_filter, na=False)
     ]
 if label_options:
-    df_filtered = df_filtered[df_filtered["label"].isin(label_options)]
+    df_filtered = df_filtered[df_filtered[LABEL].isin(label_options)]
 if show_only_low:
-    df_filtered = df_filtered[df_filtered["low_confidence"]]
+    df_filtered = df_filtered[df_filtered[LOW_CONFIDENCE]]
 if sort_by_prob:
     df_filtered = df_filtered.sort_values(
-        by=["probability"], ascending=True, na_position="last"
+        by=[PROBABILITY], ascending=True, na_position="last"
     )
 else:
     df_filtered = df_filtered.sort_index()
@@ -373,28 +389,30 @@ row = df_filtered.loc[i]
 
 st.markdown(f"### Item {i+1} / {n}")
 # Visual low-confidence indicator
-if bool(row.get("low_confidence", False)):
-    st.warning(f"LOW CONFIDENCE — probability={row.get('probability')}")
+if bool(row.get(LOW_CONFIDENCE, False)):
+    st.warning(f"LOW CONFIDENCE — probability={row.get(PROBABILITY)}")
 else:
-    st.success(f"Predicted label: {row.get('label')} (prob={row.get('probability')})")
+    st.success(
+        f"Predicted label: {row.get(LABEL)} (probability={row.get(PROBABILITY)})"
+    )
 
 st.write(
     {
-        "audio_file": row.get("audio_file"),
-        "start_seconds": float(row.get("start_seconds", 0.0)),
-        "end_seconds": float(row.get("end_seconds", 0.0)),
-        "label": row.get("label"),
-        "probability": row.get("probability"),
+        AUDIO_FILE: row.get(AUDIO_FILE),
+        START_SECONDS: float(row.get(START_SECONDS, 0.0)),
+        END_SECONDS: float(row.get(END_SECONDS, 0.0)),
+        LABEL: row.get(LABEL),
+        PROBABILITY: row.get(PROBABILITY),
     }
 )
 
 # playback (use soundfile to write BytesIO)
-audio_path = os.path.join(audio_dir, row["audio_file"])
+audio_path = os.path.join(audio_dir, row[AUDIO_FILE])
 if os.path.exists(audio_path):
     try:
         waveform, sr = torchaudio.load(audio_path)  # waveform: [channels, T]
-        s = int(max(0, round(row["start_seconds"] * sr)))
-        e = int(min(round(row["end_seconds"] * sr), waveform.shape[1]))
+        s = int(max(0, round(row[START_SECONDS] * sr)))
+        e = int(min(round(row[END_SECONDS] * sr), waveform.shape[1]))
         seg = (
             waveform[:, s:e] if e > s else waveform[:, s : s + 1]
         )  # shape [channels, T]
@@ -415,7 +433,7 @@ if os.path.exists(audio_path):
             arr_mono = arr[:, 0] if arr.ndim > 1 else arr
             ax.plot(arr_mono)
             ax.set_title(
-                f"{row['audio_file']} [{row['start_seconds']:.3f} - {row['end_seconds']:.3f}]"
+                f"{row[AUDIO_FILE]} [{row[START_SECONDS]:.3f} - {row[END_SECONDS]:.3f}]"
             )
             st.pyplot(fig)
 
@@ -428,7 +446,7 @@ else:
 col_a, col_b, col_c = st.columns([3, 2, 3])
 with col_a:
     try:
-        cur_idx = LABELS.index(row["label"]) if row["label"] in LABELS else 0
+        cur_idx = LABELS.index(row[LABEL]) if row[LABEL] in LABELS else 0
     except Exception:
         cur_idx = 0
     new_label = st.selectbox("Correct label", options=LABELS, index=cur_idx)
@@ -444,11 +462,11 @@ if save_btn:
     out = row.to_dict()
     out.update(
         {
-            "corrected_label": new_label,
-            "annotator_id": annotator,
-            "action": action,
-            "comment": comment,
-            "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            CORRECTED_LABEL: new_label,
+            ANNOTATOR_ID: annotator,
+            ACTION: action,
+            COMMENT: comment,
+            TIMESTAMP: datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
     )
     # append to session corrections

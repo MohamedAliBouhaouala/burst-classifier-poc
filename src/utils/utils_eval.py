@@ -15,6 +15,23 @@ import itertools
 import warnings
 
 from helpers.constants import LABELS, LABEL_IDX
+from constants import (
+    PER_CLASS,
+    OVERALL,
+    F1,
+    MICRO_F1,
+    MACRO_F1,
+    PRECISION,
+    RECALL,
+    SUPPORT,
+    ECE,
+    ACCURACY,
+    PR_AUC,
+    ERROR,
+    PROBABILITIES,
+    START_SECONDS,
+    END_SECONDS,
+)
 
 
 # Expected Calibration Error
@@ -28,7 +45,7 @@ def compute_ece_per_class(
     Returns dict: {"per_class": {class_idx: ece}, "overall": ece}
     """
     if probs is None or len(probs) == 0:
-        return {"per_class": {}, "overall": float("nan")}
+        return {PER_CLASS: {}, OVERALL: float("nan")}
     probs = np.asarray(probs, dtype=float)
     y_true = np.asarray(y_true, dtype=int)
     N, C = probs.shape
@@ -58,7 +75,7 @@ def compute_ece_per_class(
             probability = prob_c[mask].mean()
             ece_c += (mask.sum() / N) * abs(acc - probability)
         ece_per[c] = float(ece_c)
-    return {"per_class": ece_per, "overall": float(overall_ece)}
+    return {PER_CLASS: ece_per, OVERALL: float(overall_ece)}
 
 
 # ---------- confusion matrix plotting ----------
@@ -131,28 +148,28 @@ def compute_metrics(
 ) -> Dict:
     out = {}
     if len(y_true) == 0:
-        return {"error": "no samples"}
+        return {ERROR: "no samples"}
     p, r, f1, sup = precision_recall_fscore_support(
         y_true, y_pred, labels=list(range(len(LABELS))), zero_division=0
     )
-    out["per_class"] = {}
+    out[PER_CLASS] = {}
     for i, lab in enumerate(LABELS):
-        out["per_class"][lab] = {
-            "precision": float(p[i]),
-            "recall": float(r[i]),
-            "f1": float(f1[i]),
-            "support": int(sup[i]),
+        out[PER_CLASS][lab] = {
+            PRECISION: float(p[i]),
+            RECALL: float(r[i]),
+            F1: float(f1[i]),
+            SUPPORT: int(sup[i]),
         }
-    out["macro_f1"] = float(f1_score(y_true, y_pred, average="macro"))
-    out["micro_f1"] = float(f1_score(y_true, y_pred, average="micro"))
-    out["accuracy"] = float(accuracy_score(y_true, y_pred))
+    out[MACRO_F1] = float(f1_score(y_true, y_pred, average="macro"))
+    out[MICRO_F1] = float(f1_score(y_true, y_pred, average="micro"))
+    out[ACCURACY] = float(accuracy_score(y_true, y_pred))
     # ECE and PR AUCs if probs provided
     if probs is not None and len(probs) == len(y_true):
         try:
             ece_summary = compute_ece_per_class(probs, y_true)
-            out["ece"] = ece_summary["overall"]
+            out[ECE] = ece_summary[OVERALL]
         except Exception:
-            out["ece"] = None
+            out[ECE] = None
         # per-class ROC AUC if possible
         try:
             pr_aucs = {}
@@ -166,9 +183,9 @@ def compute_metrics(
                     pr_aucs[lab] = float(auc(recall, precision))
                 except Exception:
                     pr_aucs[lab] = None
-            out["pr_auc_per_class"] = pr_aucs
+            out[f"{PR_AUC}_{PER_CLASS}"] = pr_aucs
         except Exception:
-            out["pr_auc_per_class"] = None
+            out[f"{PR_AUC}_{PER_CLASS}"] = None
     return out
 
 
@@ -218,16 +235,16 @@ def evaluate_and_log(
     if tracker:
         try:
             # top-level scalars
-            if "macro_f1" in metrics:
-                tracker.log_metric("macro_f1", metrics["macro_f1"])
-            if "accuracy" in metrics:
-                tracker.log_metric("accuracy", metrics["accuracy"])
+            if MACRO_F1 in metrics:
+                tracker.log_metric(MACRO_F1, metrics[MACRO_F1])
+            if ACCURACY in metrics:
+                tracker.log_metric(ACCURACY, metrics[ACCURACY])
             # per-class f1
-            for lab, v in metrics.get("per_class", {}).items():
-                tracker.log_metric(f"f1_{lab}", v.get("f1", 0.0))
+            for lab, v in metrics.get(PER_CLASS, {}).items():
+                tracker.log_metric(f"{F1}_{lab}", v.get(F1, 0.0))
             # ece
-            if "ece" in metrics and metrics["ece"] is not None:
-                tracker.log_metric("ece", metrics["ece"])
+            if ECE in metrics and metrics[ECE] is not None:
+                tracker.log_metric(ECE, metrics[ECE])
         except Exception:
             pass
     return metrics
@@ -252,17 +269,17 @@ def weighted_average_probs_for_segment(
     Compute overlap-weighted average of probs. If no overlapping windows found, pick nearest window
     (closest center) and return its probs.
     """
-    s0 = float(segment["start_seconds"])
-    s1 = float(segment["end_seconds"])
+    s0 = float(segment[START_SECONDS])
+    s1 = float(segment[END_SECONDS])
     weights = []
     probs_list = []
     for w in windows:
-        w0 = float(w["start_seconds"])
-        w1 = float(w["end_seconds"])
+        w0 = float(w[START_SECONDS])
+        w1 = float(w[END_SECONDS])
         inter = interval_intersection(s0, s1, w0, w1)
         if inter > 0:
             weights.append(inter)
-            probs_list.append(np.array(w["probabilities"], dtype=float))
+            probs_list.append(np.array(w[PROBABILITIES], dtype=float))
     if len(weights) == 0:
         # fallback: pick nearest window by center distance
         if len(windows) == 0:
@@ -270,11 +287,11 @@ def weighted_average_probs_for_segment(
             return [1.0 / len(LABELS)] * len(LABELS)
         seg_center = 0.5 * (s0 + s1)
         dists = [
-            abs((0.5 * (w["start_seconds"] + w["end_seconds"])) - seg_center)
+            abs((0.5 * (w[START_SECONDS] + w[END_SECONDS])) - seg_center)
             for w in windows
         ]
         idx = int(np.argmin(dists))
-        return list(np.array(windows[idx]["probabilities"], dtype=float))
+        return list(np.array(windows[idx][PROBABILITIES], dtype=float))
     weights = np.array(weights)
     probs_stack = np.stack(probs_list, axis=0)  # [K, C]
     # normalize weights

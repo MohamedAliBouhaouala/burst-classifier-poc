@@ -9,6 +9,15 @@ from torchaudio.transforms import MelSpectrogram
 from types import SimpleNamespace
 import warnings
 
+from constants import (
+    AUDIO_FILE,
+    START_SECONDS,
+    END_SECONDS,
+    LABEL,
+    PROBABILITIES,
+    PROBABILITY,
+    PER_CLASS,
+)
 from helpers.common import resolve_settings, load_model_from_path
 from helpers.constants import INV_LABEL_MAP
 from helpers.helpers_predict import batch_infer_specs, seg_to_spec_tensor
@@ -94,9 +103,9 @@ def sliding_window_infer_model(
         specs_batch.append(spec)
         metas_batch.append(
             {
-                "start_seconds": float(start),
-                "end_seconds": float(min(start + window_seconds, total_seconds)),
-                "audio_file": audio_basename,
+                START_SECONDS: float(start),
+                END_SECONDS: float(min(start + window_seconds, total_seconds)),
+                AUDIO_FILE: audio_basename,
             }
         )
 
@@ -114,13 +123,13 @@ def sliding_window_infer_model(
                     probability = float(p[int(idx)])
                     results.append(
                         {
-                            "audio_file": metas_batch[i]["audio_file"],
-                            "start_seconds": metas_batch[i]["start_seconds"],
-                            "end_seconds": metas_batch[i]["end_seconds"],
-                            "label": label,
-                            "probability": probability,
-                            "probabilities": p.tolist(),
-                            "per_class_probability": per_class,
+                            AUDIO_FILE: metas_batch[i][AUDIO_FILE],
+                            START_SECONDS: metas_batch[i][START_SECONDS],
+                            END_SECONDS: metas_batch[i][END_SECONDS],
+                            LABEL: label,
+                            PROBABILITY: probability,
+                            PROBABILITIES: p.tolist(),
+                            f"{PER_CLASS}_{PROBABILITY}": per_class,
                         }
                     )
             specs_batch = []
@@ -144,13 +153,13 @@ def sliding_window_infer_model(
                 probability = float(p[int(idx)])
                 results.append(
                     {
-                        "audio_file": metas_batch[i]["audio_file"],
-                        "start_seconds": metas_batch[i]["start_seconds"],
-                        "end_seconds": metas_batch[i]["end_seconds"],
-                        "label": label,
-                        "probability": probability,
-                        "probabilities": p.tolist(),
-                        "per_class_probability": per_class,
+                        AUDIO_FILE: metas_batch[i][AUDIO_FILE],
+                        START_SECONDS: metas_batch[i][START_SECONDS],
+                        END_SECONDS: metas_batch[i][END_SECONDS],
+                        LABEL: label,
+                        PROBABILITY: probability,
+                        PROBABILITIES: p.tolist(),
+                        f"{PER_CLASS}_{PROBABILITY}": per_class,
                     }
                 )
 

@@ -8,6 +8,7 @@ import torchaudio
 import pandas as pd
 import numpy as np
 
+from constants import AUDIO_FILE, START_SECONDS, END_SECONDS, LABEL
 from helpers.constants import LABEL_MAP, INV_LABEL_MAP
 from utils.common import dataset_hash, sha256_file
 from helpers.dataset import (
@@ -84,10 +85,10 @@ class SegmentDataset(Dataset):
 
     def __getitem__(self, idx: int):
         row = self.meta.loc[idx]
-        rel_audio = row["audio_file"]
+        rel_audio = row[AUDIO_FILE]
         audio_path = os.path.join(self.audio_root, rel_audio)
-        start_frame = int(row["start_seconds"] * self.sr)
-        end_frame = int(row["end_seconds"] * self.sr)
+        start_frame = int(row[START_SECONDS] * self.sr)
+        end_frame = int(row[END_SECONDS] * self.sr)
         target_len = int(self.fixed_seconds * self.sr)
 
         try:
@@ -115,37 +116,37 @@ class SegmentDataset(Dataset):
             # log1p and normalize per-sample
             spec = torch.log1p(spec)
             spec = (spec - spec.mean()) / (spec.std() + 1e-6)
-            label = LABEL_MAP.get(row["label"], -1)
+            label = LABEL_MAP.get(row[LABEL], -1)
             meta = {
-                "audio_file": rel_audio,
-                "start_seconds": float(row["start_seconds"]),
-                "end_seconds": float(row["end_seconds"]),
-                "label": row["label"],
+                AUDIO_FILE: rel_audio,
+                START_SECONDS: float(row[START_SECONDS]),
+                END_SECONDS: float(row[END_SECONDS]),
+                LABEL: row[LABEL],
             }
             return spec.float(), int(label), meta
         except FileNotFoundError:
             # Return zero tensor placeholder if missing file (training will continue but manifest will flag missing)
             approx_frames = max(1, int(np.ceil(target_len / 512)))
             spec = torch.zeros((1, self.n_mels, approx_frames), dtype=torch.float32)
-            label = LABEL_MAP.get(row["label"], -1)
+            label = LABEL_MAP.get(row[LABEL], -1)
             meta = {
-                "audio_file": rel_audio,
-                "start_seconds": float(row["start_seconds"]),
-                "end_seconds": float(row["end_seconds"]),
-                "label": row["label"],
+                AUDIO_FILE: rel_audio,
+                START_SECONDS: float(row[START_SECONDS]),
+                END_SECONDS: float(row[END_SECONDS]),
+                LABEL: row[LABEL],
                 "missing": True,
             }
             return spec, int(label), meta
         except Exception:
             approx_frames = max(1, int(np.ceil(target_len / 512)))
             spec = torch.zeros((1, self.n_mels, approx_frames), dtype=torch.float32)
-            label = LABEL_MAP.get(row["label"], -1)
+            label = LABEL_MAP.get(row[LABEL], -1)
             meta = {
-                "audio_file": rel_audio,
-                "start_seconds": float(row["start_seconds"]),
-                "end_seconds": float(row["end_seconds"]),
-                "label": row["label"],
-                "error": True,
+                AUDIO_FILE: rel_audio,
+                START_SECONDS: float(row[START_SECONDS]),
+                END_SECONDS: float(row[END_SECONDS]),
+                LABEL: row[LABEL],
+                ERROR: True,
             }
             return spec, int(label), meta
 

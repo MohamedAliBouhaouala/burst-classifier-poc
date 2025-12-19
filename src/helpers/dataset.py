@@ -15,6 +15,25 @@ import torchaudio
 import pandas as pd
 import numpy as np
 
+from constants import (
+    AUDIO_FILE,
+    START_SECONDS,
+    END_SECONDS,
+    LABEL,
+    LABELS,
+    DATASET,
+    MANIFEST,
+    PATH,
+    SIZE,
+    SHA,
+    SHA256,
+    ERROR,
+    CREATED_AT,
+    DATA_DIR,
+    AUDIO_FILES,
+    N_SEGEMENTS,
+    COUNTS,
+)
 from .constants import LABEL_MAP, INV_LABEL_MAP
 from utils.common import dataset_hash, sha256_file
 
@@ -55,22 +74,18 @@ def read_label_file(path: str, audio_filename: str) -> pd.DataFrame:
                     continue
                 rows.append(
                     {
-                        "audio_file": audio_filename,
-                        "start_seconds": float(start),
-                        "end_seconds": float(end),
-                        "label": label,
+                        AUDIO_FILE: audio_filename,
+                        START_SECONDS: float(start),
+                        END_SECONDS: float(end),
+                        LABEL: label,
                     }
                 )
     except FileNotFoundError:
         # If the label file is missing/unreadable, return empty df
-        return pd.DataFrame(
-            columns=["audio_file", "start_seconds", "end_seconds", "label"]
-        )
+        return pd.DataFrame(columns=[AUDIO_FILE, START_SECONDS, END_SECONDS, LABEL])
 
     if len(rows) == 0:
-        return pd.DataFrame(
-            columns=["audio_file", "start_seconds", "end_seconds", "label"]
-        )
+        return pd.DataFrame(columns=[AUDIO_FILE, START_SECONDS, END_SECONDS, LABEL])
     return pd.DataFrame(rows)
 
 
@@ -82,9 +97,7 @@ def build_meta_from_dir(data_dir: str, label_suffixes=(".txt", ".csv")) -> pd.Da
     """
     data_dir = os.path.abspath(data_dir)
     if not os.path.isdir(data_dir):
-        return pd.DataFrame(
-            columns=["audio_file", "start_seconds", "end_seconds", "label"]
-        )
+        return pd.DataFrame(columns=[AUDIO_FILE, START_SECONDS, END_SECONDS, LABEL])
 
     rows: List[pd.DataFrame] = []
     files = os.listdir(data_dir)
@@ -96,8 +109,8 @@ def build_meta_from_dir(data_dir: str, label_suffixes=(".txt", ".csv")) -> pd.Da
                 base + ".wav",
                 base + ".flac",
                 base + ".mp3",
-                base.replace("_labels", "") + ".wav",
-                base.replace("-labels", "") + ".wav",
+                base.replace(f"_{LABELS}", "") + ".wav",
+                base.replace(f"-{LABELS}", "") + ".wav",
             ]
             audio_file = None
             for c in candidates:
@@ -116,14 +129,15 @@ def build_meta_from_dir(data_dir: str, label_suffixes=(".txt", ".csv")) -> pd.Da
             if len(df) > 0:
                 rows.append(df)
     if len(rows) == 0:
-        return pd.DataFrame(
-            columns=["audio_file", "start_seconds", "end_seconds", "label"]
-        )
+        return pd.DataFrame(columns=[AUDIO_FILE, START_SECONDS, END_SECONDS, LABEL])
     return pd.concat(rows, ignore_index=True)
 
 
 def build_and_write_dataset_manifest(
-    meta_df: pd.DataFrame, data_dir: str, out_dir: str, prefix: str = "dataset_manifest"
+    meta_df: pd.DataFrame,
+    data_dir: str,
+    out_dir: str,
+    prefix: str = f"{DATASET}_{MANIFEST}",
 ) -> Tuple[str, Dict[str, Any]]:
     """
     Builds and writes a JSON manifest with per-file sha256, size, mtime and label summary.
@@ -132,7 +146,7 @@ def build_and_write_dataset_manifest(
     os.makedirs(out_dir, exist_ok=True)
     data_dir = os.path.abspath(data_dir)
 
-    audio_files = sorted(meta_df["audio_file"].unique().tolist())
+    audio_files = sorted(meta_df[AUDIO_FILE].unique().tolist())
     files_info: List[Dict[str, Any]] = []
     for rel in audio_files:
         p = os.path.join(data_dir, rel)
@@ -142,16 +156,16 @@ def build_and_write_dataset_manifest(
                 sha, size = sha256_file(p)
                 files_info.append(
                     {
-                        "relpath": os.path.relpath(p, start=data_dir),
-                        "sha256": sha,
-                        "size": st.st_size,
+                        f"rel{PATH}": os.path.relpath(p, start=data_dir),
+                        SHA256: sha,
+                        SIZE: st.st_size,
                         "mtime": int(st.st_mtime),
                     }
                 )
             except Exception as e:
-                files_info.append({"relpath": rel, "error": str(e)})
+                files_info.append({f"rel{PATH}": rel, ERROR: str(e)})
         else:
-            files_info.append({"relpath": rel, "missing": True})
+            files_info.append({f"rel{PATH}": rel, "missing": True})
 
     # include .txt label files under data_dir
     for root, _, fnames in os.walk(data_dir):
@@ -159,30 +173,30 @@ def build_and_write_dataset_manifest(
             if fn.lower().endswith(".txt"):
                 p = os.path.join(root, fn)
                 rel = os.path.relpath(p, start=data_dir)
-                if not any(f.get("relpath") == rel for f in files_info):
+                if not any(f.get(f"rel{PATH}") == rel for f in files_info):
                     try:
                         st = os.stat(p)
                         sha = sha256_file(p)
                         files_info.append(
                             {
-                                "relpath": rel,
-                                "sha256": sha,
-                                "size": st.st_size,
+                                f"rel{PATH}": rel,
+                                SHA256: sha,
+                                SIZE: st.st_size,
                                 "mtime": int(st.st_mtime),
                             }
                         )
                     except Exception as e:
-                        files_info.append({"relpath": rel, "error": str(e)})
+                        files_info.append({f"rel{PATH}": rel, ERROR: str(e)})
 
-    label_counts = meta_df["label"].value_counts().to_dict()
+    label_counts = meta_df[LABEL].value_counts().to_dict()
     label_map_counts = {str(k): int(v) for k, v in label_counts.items()}
 
     manifest = {
-        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "data_dir": data_dir,
-        "n_audio_files": len(audio_files),
-        "n_segments": int(len(meta_df)),
-        "label_counts": label_map_counts,
+        CREATED_AT: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        DATA_DIR: data_dir,
+        f"n_{AUDIO_FILES}": len(audio_files),
+        N_SEGEMENTS: int(len(meta_df)),
+        f"{LABEL}_{COUNTS}": label_map_counts,
         "files": files_info,
     }
 

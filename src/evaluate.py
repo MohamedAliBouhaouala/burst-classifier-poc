@@ -10,6 +10,30 @@ from datetime import datetime
 import numpy as np
 import logging
 
+from constants import (
+    AUDIO_FILE,
+    START_SECONDS,
+    END_SECONDS,
+    LABEL,
+    PROBABILITIES,
+    PROBABILITY,
+    PER_CLASS,
+    METRICS,
+    ACCURACY,
+    ECE,
+    MACRO_F1,
+    F1,
+    PLOTS,
+    TRUE_LABEL,
+    PRED_LABEL,
+    N_SEGEMENTS,
+    CREATED_AT,
+    MODEL,
+    DATA_DIR,
+    REPORT_PATH,
+    CSV_PATH,
+)
+
 from helpers.common import load_model
 from helpers.constants import FULL, LABEL_MAP, INV_LABEL_MAP, LABELS, SPLIT_CHOICES
 from helpers.dataset import build_meta_from_dir
@@ -61,7 +85,7 @@ def evaluate_cli(
     meta = filter_meta_by_split(meta, split_map, split)
 
     # group segments by audio file
-    files = sorted(meta["audio_file"].unique().tolist())
+    files = sorted(meta[AUDIO_FILE].unique().tolist())
 
     all_segment_results = []  # rows for CSV
     y_true = []
@@ -78,7 +102,7 @@ def evaluate_cli(
             logger.warning(f"audio missing, skipping: {audio_path}")
             continue
         # get segments for this file
-        segs = meta[meta["audio_file"] == audio].to_dict(orient="records")
+        segs = meta[meta[AUDIO_FILE] == audio].to_dict(orient="records")
 
         # run predictions for this single file
         try:
@@ -106,17 +130,17 @@ def evaluate_cli(
         window_map = {}
         for p in preds:
             # ensure audio_file matches
-            if os.path.basename(p.get("audio_file", audio)) != os.path.basename(audio):
+            if os.path.basename(p.get(AUDIO_FILE, audio)) != os.path.basename(audio):
                 # skip windows not for this audio (if predict returned many files)
                 continue
-            key = (float(p["start_seconds"]), float(p["end_seconds"]))
+            key = (float(p[START_SECONDS]), float(p[END_SECONDS]))
             # if multiple rows exist for same window (top_k), keep the full probs vector
             if key not in window_map:
-                window_map[key] = np.array(p["probabilities"], dtype=float)
+                window_map[key] = np.array(p[PROBABILITIES], dtype=float)
             else:
                 # keep the max probs (elementwise) as a conservative merge (unlikely necessary)
                 window_map[key] = np.maximum(
-                    window_map[key], np.array(p["probabilities"], dtype=float)
+                    window_map[key], np.array(p[PROBABILITIES], dtype=float)
                 )
         # convert to list of windows with probs
         windows = []
@@ -126,9 +150,9 @@ def evaluate_cli(
             probs = (probs / ssum).tolist()
             windows.append(
                 {
-                    "start_seconds": float(s),
-                    "end_seconds": float(e),
-                    "probabilities": probs,
+                    START_SECONDS: float(s),
+                    END_SECONDS: float(e),
+                    PROBABILITIES: probs,
                 }
             )
 
@@ -141,19 +165,19 @@ def evaluate_cli(
             # store row
             all_segment_results.append(
                 {
-                    "audio_file": os.path.basename(audio),
-                    "start_seconds": float(seg["start_seconds"]),
-                    "end_seconds": float(seg["end_seconds"]),
-                    "true_label": seg["label"],
-                    "pred_label": pred_label,
-                    "probability": probability,
-                    "per_class_probability": {
+                    AUDIO_FILE: os.path.basename(audio),
+                    START_SECONDS: float(seg[START_SECONDS]),
+                    END_SECONDS: float(seg[END_SECONDS]),
+                    TRUE_LABEL: seg[LABEL],
+                    PRED_LABEL: pred_label,
+                    PROBABILITY: probability,
+                    f"{PER_CLASS}_{PROBABILITY}": {
                         INV_LABEL_MAP[i]: float(avg_probs[i])
                         for i in range(len(avg_probs))
                     },
                 }
             )
-            y_true.append(LABEL_MAP.get(seg["label"]))
+            y_true.append(LABEL_MAP.get(seg[LABEL]))
             y_pred.append(pred_idx)
             y_probs.append(avg_probs)
 
@@ -166,33 +190,33 @@ def evaluate_cli(
         writer = csv.writer(fo)
         writer.writerow(
             [
-                "audio_file",
-                "start_seconds",
-                "end_seconds",
-                "true_label",
-                "pred_label",
-                "probability",
+                AUDIO_FILE,
+                START_SECONDS,
+                END_SECONDS,
+                TRUE_LABEL,
+                PRED_LABEL,
+                PROBABILITY,
             ]
         )
         for r in all_segment_results:
             writer.writerow(
                 [
-                    r["audio_file"],
-                    f"{r['start_seconds']:.6f}",
-                    f"{r['end_seconds']:.6f}",
-                    r["true_label"],
-                    r["pred_label"],
-                    f"{r['probability']:.6f}",
+                    r[AUDIO_FILE],
+                    f"{r[START_SECONDS]:.6f}",
+                    f"{r[END_SECONDS]:.6f}",
+                    r[TRUE_LABEL],
+                    r[PRED_LABEL],
+                    f"{r[PROBABILITY]:.6f}",
                 ]
             )
 
     # save metrics JSON (include provenance)
     report = {
-        "created_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "model": model,
-        "data_dir": os.path.abspath(data_dir),
-        "n_segments": len(all_segment_results),
-        "metrics": metrics,
+        CREATED_AT: datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        MODEL: model,
+        DATA_DIR: os.path.abspath(data_dir),
+        N_SEGEMENTS: len(all_segment_results),
+        METRICS: metrics,
     }
     report_path = os.path.join(out_dir, "evaluation_report.json")
     with open(report_path, "w", encoding="utf-8") as fh:
@@ -204,32 +228,32 @@ def evaluate_cli(
             tracker.log_artifact(csv_path, name=os.path.basename(csv_path))
             tracker.log_artifact(report_path, name=os.path.basename(report_path))
             # log scalar metrics
-            if "macro_f1" in metrics:
-                tracker.log_metric("macro_f1", metrics["macro_f1"])
-            if "accuracy" in metrics:
-                tracker.log_metric("accuracy", metrics["accuracy"])
-            for lab, v in metrics.get("per_class", {}).items():
-                tracker.log_metric(f"f1_{lab}", v.get("f1", 0.0))
-            if "ece" in metrics and metrics["ece"] is not None:
-                tracker.log_metric("ece", metrics["ece"])
+            if MACRO_F1 in metrics:
+                tracker.log_metric(MACRO_F1, metrics[MACRO_F1])
+            if ACCURACY in metrics:
+                tracker.log_metric(ACCURACY, metrics[ACCURACY])
+            for lab, v in metrics.get(PER_CLASS, {}).items():
+                tracker.log_metric(f"{F1}_{lab}", v.get(F1, 0.0))
+            if ECE in metrics and metrics[ECE] is not None:
+                tracker.log_metric(ECE, metrics[ECE])
         except Exception:
             pass
 
     evaluation_results = {
-        "report_path": report_path,
-        "csv_path": csv_path,
-        "metrics": metrics,
+        REPORT_PATH: report_path,
+        CSV_PATH: csv_path,
+        METRICS: metrics,
     }
 
     # generate evaluation plots
     summary_metrics = generate_plots_from_summary(
-        evaluation_results["metrics"],
-        out_dir=os.path.join(out_dir, "plots"),
+        evaluation_results[METRICS],
+        out_dir=os.path.join(out_dir, PLOTS),
         tracker=tracker,
     )
 
     pr_calibration_summary = generate_pr_and_calibration(
-        y_true, y_probs, LABELS, out_dir=os.path.join(out_dir, "plots"), tracker=tracker
+        y_true, y_probs, LABELS, out_dir=os.path.join(out_dir, PLOTS), tracker=tracker
     )
     return evaluation_results
 
