@@ -94,8 +94,6 @@ def run_training(
         train_meta, args.data_dir, args, augment=True
     )
     val_loader = prepare_loader_from_meta(val_meta, args.data_dir, args, augment=False)
-    print("LEN LABELS")
-    print(len(LABELS))
     model = SmallCNN(in_channels=1, n_classes=len(LABELS)).to(device)
     opt = _get_optimizer(model, args.lr)
     criterion = _get_criterion(train_meta, device)
