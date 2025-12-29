@@ -13,8 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 def find_evaluation_report(eval_dir: str) -> Optional[Path]:
     """
-    Search for an evaluation report file (commonly named evaluation_report.json or metrics.json)
-    inside the given eval_dir.
+    Search for an evaluation report file inside a given evaluation folder.
     Returns the Path if found, otherwise None.
     """
     eval_path = Path(eval_dir)

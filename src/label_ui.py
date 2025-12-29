@@ -55,6 +55,7 @@ st.title("Prelabel Review & Correction")
 
 
 def load_csv_from_uploaded(uploaded) -> pd.DataFrame:
+    """Load a CSV file from an uploaded object."""
     try:
         df = pd.read_csv(uploaded)
         return df
@@ -64,11 +65,7 @@ def load_csv_from_uploaded(uploaded) -> pd.DataFrame:
 
 
 def load_json_from_uploaded(uploaded) -> pd.DataFrame:
-    """
-    Accepts:
-      - a JSON object with key "predictions": [ {...}, ... ] where each dict uses canonical column names, or
-      - a JSON list [ {...}, {...} ] where each dict uses canonical column names.
-    """
+    """Load a JSON file from an uploaded object."""
     try:
         raw = uploaded.read()
         if isinstance(raw, bytes):
@@ -103,6 +100,7 @@ def load_json_from_uploaded(uploaded) -> pd.DataFrame:
 
 
 def load_from_dir(path: str) -> pd.DataFrame:
+    """ "Load all prediction files from a directory into a single DataFrame."""
     p = Path(path)
     if not p.exists():
         st.error(f"Folder not found: {path}")
@@ -167,6 +165,7 @@ def validate_and_normalize(df: pd.DataFrame) -> pd.DataFrame:
 def save_corrections_to_disk(
     corrections: pd.DataFrame, annotator: str, out_dir: str = "."
 ):
+    """Save corrected annotations to a timestamped CSV file."""
     ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
     fname = f"annotated_{annotator}_{ts}.csv"
     out_path = Path(out_dir) / fname
@@ -177,13 +176,7 @@ def save_corrections_to_disk(
 def export_corrections_package(
     corrections_df: pd.DataFrame, audio_root: str, annotator: str
 ) -> str | None:
-    """
-    Create a zip archive with:
-      - audio_segments/<segment_wav_files>
-      - labels/<original_audio_basename>.txt  (tab-separated lines: start_seconds \t end_seconds \t label)
-      - metadata.json (annotator + timestamp + num_items)
-    Returns path to zip file, or None on error.
-    """
+    """Export corrected audio segments and labels into a structured zip package."""
     if corrections_df is None or corrections_df.empty:
         return None
 

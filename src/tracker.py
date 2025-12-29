@@ -3,6 +3,11 @@ import json
 
 
 class NoopTracker:
+    """
+    A tracker that performs no operations. Useful as a placeholder when
+    no experiment tracking is required.
+    """
+
     def __init__(self, project=None, task_name=None, **kwargs):
         self.project = project
         self.task_name = task_name
@@ -28,6 +33,8 @@ class NoopTracker:
 
 
 class ClearMLTracker:
+    """Tracker implementation using ClearML."""
+
     def __init__(self, project=None, task_name=None, **kwargs):
         try:
             from clearml import Task, OutputModel
@@ -81,6 +88,8 @@ class ClearMLTracker:
 
 
 class MLflowTracker:
+    """Tracker implementation using MLflow."""
+
     def __init__(self, project=None, task_name=None, **kwargs):
         try:
             import mlflow
@@ -151,6 +160,7 @@ class MLflowTracker:
 def TrackerFactory(
     tracker_type: str = "none", project: str = None, task_name: str = None, **kwargs
 ):
+    """Factory function to instantiate a tracker by type."""
     tt = (tracker_type or "none").lower()
     if tt in ("none", "noop"):
         return NoopTracker(project=project, task_name=task_name, **kwargs)

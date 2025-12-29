@@ -70,6 +70,7 @@ def predict_cli(
     out: str = None,
     batch: bool = False,
 ) -> List[Dict[str, Any]]:
+    """Perform predictions on one or more audio files using a trained model."""
 
     # expand audio inputs into proper list of audio files
     audio_paths = _gather_audio_paths(audio, batch=batch)
