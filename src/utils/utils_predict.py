@@ -180,6 +180,7 @@ def predict(
     batch_size: int = 64,
     top_k: int = 1,
 ) -> List[Dict[str, Any]]:
+    """Perform model prediction on an audio file using sliding-window inference."""
 
     fake_args = SimpleNamespace(
         window_seconds=window_seconds, sr=sr, n_mels=n_mels, batch_size=batch_size

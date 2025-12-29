@@ -24,10 +24,12 @@ from constants import (
 
 
 def _safe_mkdir(path: str):
+    """Create a directory if it doesn't exist."""
     os.makedirs(path, exist_ok=True)
 
 
-def sha256_file(path) -> dict:
+def sha256_file(path: str) -> dict:
+    """Compute the SHA-256 hash and file size of a file."""
     h = hashlib.sha256()
     with open(path, "rb") as fh:
         for chunk in iter(lambda: fh.read(8192), b""):
@@ -36,6 +38,7 @@ def sha256_file(path) -> dict:
 
 
 def dataset_hash(meta_df: pd.DataFrame, data_dir: str) -> str:
+    """Compute a deterministic SHA-256 hash of a dataset."""
     h = hashlib.sha256()
     for _, r in meta_df.sort_values(
         [AUDIO_FILE, START_SECONDS, END_SECONDS]
@@ -53,6 +56,7 @@ def dataset_hash(meta_df: pd.DataFrame, data_dir: str) -> str:
 
 
 def get_git_sha():
+    """Get the current Git commit SHA."""
     try:
         sha = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip()
         return sha
@@ -61,11 +65,13 @@ def get_git_sha():
 
 
 def save_json(path, obj):
+    """Save an object to a JSON file"""
     with open(path, "w") as f:
         json.dump(obj, f, indent=2)
 
 
 def _num(x):
+    """Convert a value to float, returning NaN on failure."""
     try:
         return float(x)
     except Exception:
@@ -97,6 +103,7 @@ def compute_manifest_fingerprint(manifest: dict) -> str:
 
 
 def get_env_info() -> dict:
+    """Gather versions of key environment packages."""
     env_info = {"python": sys.version.split()[0]}
     try:
         import torch as _torch

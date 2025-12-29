@@ -38,21 +38,7 @@ def generate_pr_and_calibration(
     n_bins: int = 10,
     tracker=None,
 ) -> Dict[str, Any]:
-    """
-    Generate PR curves and calibration diagrams from per-sample predictions.
-    Inputs:
-      - y_true: list/array of ints (N,)
-      - probs: list/array shape (N,C)
-      - classes: list of class names length C
-    Outputs (saved files + numeric results):
-      {
-        "pr_curves_png": path,
-        "reliability_png": path,
-        "calibration_hist_png": path,
-        "pr_auc_per_class": {class_name: value},
-        "ece": {"per_class": {class_name: value}, "overall": value}
-      }
-    """
+    """Generate PR curves and calibration diagrams from per-sample predictions."""
     _safe_mkdir(out_dir)
     results: Dict[str, Any] = {}
     try:
@@ -179,21 +165,7 @@ def generate_plots_from_summary(
     tracker=None,
 ) -> Dict[str, str]:
     """
-    Generate summary-level plots from a metrics JSON/dict like:
-    {
-      "per_class": { "b": {"precision":.., "recall":.., "f1":.., "support":..}, ...},
-      "macro_f1": ...,
-      "micro_f1": ...,
-      "accuracy": ...,
-      "ece": ...,
-      "pr_auc_per_class": {"b":.., "mb":.., "h":..}
-    }
-
-    Outputs PNGs to out_dir and returns dict {plot_name: path}.
-    Optional `tracker` object may implement .log_artifact(path, name) to upload plots.
-
-    Returns:
-      dict of saved file paths (keys: per_class_metrics, support, pr_auc, summary_metrics, radar, csv)
+    Generate summary-level plots from a metrics dictionary
     """
 
     _safe_mkdir(out_dir)

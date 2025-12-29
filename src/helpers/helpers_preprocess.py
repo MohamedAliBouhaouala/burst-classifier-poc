@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def set_seed(seed=SEED):
+    """Set random seed for reproducibility"""
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -19,6 +20,7 @@ def set_seed(seed=SEED):
 
 
 def prepare_loader_from_meta(meta_df, data_dir, args, augment):
+    """Prepare a PyTorch DataLoader from a metadata DataFrame."""
     durations = (
         (meta_df[END_SECONDS] - meta_df[START_SECONDS]).astype(float).clip(lower=1e-6)
     )

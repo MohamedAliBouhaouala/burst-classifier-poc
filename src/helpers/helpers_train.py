@@ -8,6 +8,7 @@ from .constants import LABEL_MAP
 
 
 def compute_class_weights(meta, label_map, device):
+    """Compute class weights for imbalanced datasets."""
     counts = (
         meta[LABEL]
         .map(label_map)

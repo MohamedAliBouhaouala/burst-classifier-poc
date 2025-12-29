@@ -3,6 +3,7 @@ import math
 from typing import List, Optional, Dict, Any
 import numpy as np
 from sklearn.metrics import (
+    confusion_matrix,
     precision_recall_fscore_support,
     f1_score,
     accuracy_score,
@@ -34,16 +35,10 @@ from constants import (
 )
 
 
-# Expected Calibration Error
 def compute_ece_per_class(
     probs: np.ndarray, y_true: np.ndarray, n_bins: int = 10
 ) -> Dict[str, float]:
-    """
-    Compute per-class Expected Calibration Error (ECE) and overall ECE.
-    probs: shape [N, C]
-    y_true: shape [N] ints in [0..C-1]
-    Returns dict: {"per_class": {class_idx: ece}, "overall": ece}
-    """
+    """Compute the Expected Calibration Error (ECE) for each class and overall."""
     if probs is None or len(probs) == 0:
         return {PER_CLASS: {}, OVERALL: float("nan")}
     probs = np.asarray(probs, dtype=float)
@@ -78,12 +73,10 @@ def compute_ece_per_class(
     return {PER_CLASS: ece_per, OVERALL: float(overall_ece)}
 
 
-# ---------- confusion matrix plotting ----------
 def save_confusion_matrix(
     y_true: List[int], y_pred: List[int], classes: List[str], out_path: str
 ):
-    from sklearn.metrics import confusion_matrix
-
+    """Plot and save a confusion matrix as an image."""
     cm = confusion_matrix(y_true, y_pred, labels=list(range(len(classes))))
     fig, ax = plt.subplots(figsize=(5, 4))
     im = ax.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)
@@ -112,7 +105,6 @@ def save_confusion_matrix(
     return out_path
 
 
-# ---------- PR curves (one-vs-rest) ----------
 def save_pr_curves(
     probs: List[List[float]], y_true: List[int], classes: List[str], out_path: str
 ):
@@ -142,10 +134,10 @@ def save_pr_curves(
     return out_path
 
 
-# ---------- main metrics aggregator ----------
 def compute_metrics(
     y_true: List[int], y_pred: List[int], probs: Optional[List[List[float]]] = None
 ) -> Dict:
+    """Compute classification scores per class & overall."""
     out = {}
     if len(y_true) == 0:
         return {ERROR: "no samples"}
@@ -189,7 +181,6 @@ def compute_metrics(
     return out
 
 
-# ---------- evaluate and optionally log to tracker ----------
 def evaluate_and_log(
     y_true: List[int],
     y_pred: List[int],
@@ -198,12 +189,7 @@ def evaluate_and_log(
     report_name: str = "eval_report.json",
     tracker=None,
 ) -> Dict:
-    """
-    Compute metrics, save JSON report and plots to out_dir, and optionally log them to tracker.
-    tracker: an object implementing .log_metric(name, value, step), .log_artifact(path, name)
-             (i.e. Tracker from src/tracker.py)
-    Returns metrics dict.
-    """
+    """Compute metrics, save reports/plots, and optionally log results to a tracker."""
     metrics = compute_metrics(y_true, y_pred, probs)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
@@ -250,9 +236,6 @@ def evaluate_and_log(
     return metrics
 
 
-# ---------------------------
-# utils for matching windows to segments
-# ---------------------------
 def interval_intersection(
     a_start: float, a_end: float, b_start: float, b_end: float
 ) -> float:
@@ -263,12 +246,7 @@ def interval_intersection(
 def weighted_average_probs_for_segment(
     segment: Dict[str, Any], windows: List[Dict[str, Any]]
 ) -> List[float]:
-    """
-    Given a groundtruth segment dict {'start_seconds','end_seconds'} and a list of predicted windows:
-      windows: list of {"start","end","probs":[...]}
-    Compute overlap-weighted average of probs. If no overlapping windows found, pick nearest window
-    (closest center) and return its probs.
-    """
+    """Compute the overlap-weighted average of predicted probabilities for a segment."""
     s0 = float(segment[START_SECONDS])
     s1 = float(segment[END_SECONDS])
     weights = []

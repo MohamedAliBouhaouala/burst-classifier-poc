@@ -18,9 +18,6 @@ from helpers.dataset import (
 )
 
 
-# ---------------------------
-# SegmentDataset (torchaudio)
-# ---------------------------
 class SegmentDataset(Dataset):
     """
     Extract labeled segments from audio, return log-mel spectrograms.

@@ -27,13 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 def resolve_settings(metadata: dict, args):
-    """
-    Resolver that prefers metadata['params'] values first, then CLI args (if metadata lacks a value),
-    then hard defaults.
-
-    Returns a dict with keys:
-      window_seconds, sr, n_mels, batch_size
-    """
+    """Resolve settings by preferring metadata, then CLI args, then defaults."""
     params = {}
     if metadata and isinstance(metadata, dict):
         params = metadata.get(PARAMETERS, {}) or {}
@@ -115,23 +109,7 @@ def resolve_settings(metadata: dict, args):
 
 
 def load_model_from_path(path: str, device: torch.device):
-    """
-    Load a model and metadata from a directory.
-
-    Expectations:
-      - `path` MUST be a directory.
-      - Directory should contain one .pt checkpoint (preferred names: *best*.pt, *model*.pt).
-      - Directory may contain metadata.json (recommended). If present, its keys are loaded.
-      - If the checkpoint contains a "metadata" dict, those keys override metadata.json keys.
-
-    Returns:
-      (model, metadata_dict)
-
-    Raises:
-      FileNotFoundError if no .pt checkpoint is found in directory.
-      RuntimeError on state_dict load failures.
-    """
-
+    """Load a model and merged metadata from a directory checkpoint."""
     if not os.path.isdir(path):
         raise ValueError(
             f"load_model_from_path: expected a directory path, got: {path}"
@@ -276,7 +254,8 @@ def load_model(
     tracker_task: Optional[str] = None,
     device_str: str = "cpu",
 ):
-    # resolve candidate: local path or try tracker
+    """Load a model and metadata from a local path or tracker. Returns (model, metadata).
+    Raises RuntimeError if the model cannot be found."""
     if os.path.exists(model_or_name):
         candidate = os.path.abspath(model_or_name)
         if os.path.isfile(candidate) and candidate.lower().endswith(".pt"):
