@@ -38,16 +38,9 @@ from .constants import LABEL_MAP, INV_LABEL_MAP
 from utils.common import dataset_hash, sha256_file
 
 
-# ---------------------------
-# Label parsing / metadata
-# ---------------------------
 def read_label_file(path: str, audio_filename: str) -> pd.DataFrame:
     """
     Read a label file with whitespace-separated rows:
-      <start_seconds> <end_seconds> <label>
-
-    Returns DataFrame with columns: audio_file, start_seconds, end_seconds, label
-
     NOTE: unknown labels (not in LABEL_MAP) are SILENTLY SKIPPED.
     """
     rows = []
@@ -141,7 +134,6 @@ def build_and_write_dataset_manifest(
 ) -> Tuple[str, Dict[str, Any]]:
     """
     Builds and writes a JSON manifest with per-file sha256, size, mtime and label summary.
-    Returns (manifest_path, manifest_dict).
     """
     os.makedirs(out_dir, exist_ok=True)
     data_dir = os.path.abspath(data_dir)

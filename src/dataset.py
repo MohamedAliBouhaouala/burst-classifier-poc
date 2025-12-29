@@ -18,17 +18,9 @@ from helpers.dataset import (
 )
 
 
-# ---------------------------
-# SegmentDataset (torchaudio)
-# ---------------------------
 class SegmentDataset(Dataset):
     """
     Extract labeled segments from audio, return log-mel spectrograms.
-
-    Each __getitem__ returns: (spec_tensor, label_index, meta_dict)
-    - spec_tensor: torch.FloatTensor shape [1, n_mels, time_frames]
-    - label_index: int in {0,1,2}
-    - meta_dict: {"audio_file", "start_seconds", "end_seconds", "label"}
     """
 
     def __init__(

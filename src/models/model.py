@@ -3,6 +3,8 @@ import torch
 
 
 class SmallCNN(nn.Module):
+    """A small convolutional neural network for classification of audio inputs."""
+
     def __init__(self, in_channels=1, n_classes=3):
         super().__init__()
         self.features = nn.Sequential(

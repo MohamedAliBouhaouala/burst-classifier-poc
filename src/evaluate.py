@@ -69,13 +69,11 @@ def evaluate_cli(
     overlap_weighting: bool = True,
 ) -> Dict[str, Any]:
     """
-    Runs evaluation and writes outputs to out_dir. Returns metrics dict.
-
-    - model: local model dir or model name (if using tracker)
-    - data_dir: contains .wav and .txt label files (build_meta_from_dir will detect)
-    - split: TRAINING/VALIDATION/TEST/FULL
-    - split_map: optional path to JSON file mapping audio filename -> split label
+    Evaluate a model on a labeled audio dataset and save results.
+    Performs segment-level predictions, computes metrics, generates plots,
+    and saves outputs. Optionally logs results to a tracker.
     """
+
     os.makedirs(out_dir, exist_ok=True)
     meta = build_meta_from_dir(data_dir)
     if meta.empty:

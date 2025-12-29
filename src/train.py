@@ -92,7 +92,14 @@ def train_cli(
     tracker_task: str,
     save_epoch_checkpoints: bool,
 ) -> None:
-
+    """
+    Train a model on labeled audio data and save artifacts.
+    - Loads labeled audio from a data directory.
+    - Prepares dataset manifests, sets seeds.
+    - Trains a model with the specified hyperparameters.
+    - Saves checkpoints, results, and metadata and computes artifact checksums.
+    - Optionally logs metrics, parameters, and artifacts to a tracker (ClearML, MLflow, or none).
+    """
     set_seed()
     os.makedirs(artifacts_dir, exist_ok=True)
 
